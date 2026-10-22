@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 import Productores from "../pages/Productores";
 import Fincas from "../pages/Fincas";
@@ -13,14 +14,47 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/productores" element={<Productores />} />
-        <Route path="/fincas" element={<Fincas />} />
-        <Route path="/cultivos" element={<Cultivos />} />
-        <Route path="/actividades" element={<Actividades />} />
-        <Route path="/cosechas" element={<Cosechas />} />
-        <Route path="/economia" element={<Economia />} />
-        <Route path="/usuarios" element={<Usuarios />} />
+        <Route path="/" element={<Login />} />
+
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/productores"
+          element={<Productores />}
+        />
+
+        <Route
+          path="/fincas"
+          element={<Fincas />}
+        />
+
+        <Route
+          path="/cultivos"
+          element={<Cultivos />}
+        />
+
+        <Route
+          path="/actividades"
+          element={<Actividades />}
+        />
+
+        <Route
+          path="/cosechas"
+          element={<Cosechas />}
+        />
+
+        <Route
+          path="/economia"
+          element={<Economia />}
+        />
+
+        <Route
+          path="/usuarios"
+          element={<Usuarios />}
+        />
       </Routes>
     </BrowserRouter>
   );
