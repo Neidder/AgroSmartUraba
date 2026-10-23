@@ -1,8 +1,65 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { login } from "../services/authService";
 import "./Login.css";
 
 function Login() {
+  const navigate = useNavigate();
+
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    setError("");
+    setLoading(true);
+
+    console.log("=== LOGIN ===");
+    console.log("username:", username);
+    console.log("password:", password);
+
+    try {
+      const data = await login(username, password);
+
+      console.log("LOGIN EXITOSO");
+      console.log(data);
+
+      localStorage.setItem("token", data.token);
+
+      localStorage.setItem(
+        "usuario",
+        JSON.stringify(data.usuario)
+      );
+
+      navigate("/dashboard");
+
+    } catch (error) {
+
+      console.error("ERROR LOGIN");
+      console.error(error);
+
+      if (error.response) {
+        console.error(
+          "RESPUESTA SERVIDOR:",
+          error.response.data
+        );
+      }
+
+      setError(
+        "Usuario o contraseña incorrectos"
+      );
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-container">
+
       <div className="login-left">
 
         <div className="brand">
@@ -22,8 +79,9 @@ function Login() {
           </h2>
 
           <p>
-            Administra productores, fincas, cultivos, cosechas
-            y actividades desde una plataforma moderna,
+            Administra productores, fincas,
+            cultivos, cosechas y actividades
+            desde una plataforma moderna,
             segura y centralizada.
           </p>
         </div>
@@ -35,9 +93,7 @@ function Login() {
 
             <div>
               <h3>Productores</h3>
-              <p>
-                Registro y administración de productores.
-              </p>
+              <p>Registro y administración agrícola.</p>
             </div>
           </div>
 
@@ -46,9 +102,7 @@ function Login() {
 
             <div>
               <h3>Cultivos</h3>
-              <p>
-                Seguimiento completo de cultivos.
-              </p>
+              <p>Seguimiento completo de cultivos.</p>
             </div>
           </div>
 
@@ -57,9 +111,7 @@ function Login() {
 
             <div>
               <h3>Indicadores</h3>
-              <p>
-                Visualización y análisis de información.
-              </p>
+              <p>Análisis y control de datos.</p>
             </div>
           </div>
 
@@ -68,9 +120,7 @@ function Login() {
 
             <div>
               <h3>Seguridad</h3>
-              <p>
-                Información protegida y confiable.
-              </p>
+              <p>Información protegida.</p>
             </div>
           </div>
 
@@ -93,23 +143,47 @@ function Login() {
           <h2>Bienvenido</h2>
 
           <p className="login-subtitle">
-            Inicia sesión para acceder al sistema AgroSmart.
+            Inicia sesión para acceder al sistema.
           </p>
 
-          <form>
+          <form onSubmit={handleSubmit}>
 
             <input
               type="text"
-              placeholder="Ingrese su usuario"
+              placeholder="Usuario"
+              value={username}
+              onChange={(e) =>
+                setUsername(e.target.value)
+              }
             />
 
             <input
               type="password"
-              placeholder="Ingrese su contraseña"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
             />
 
+            {error && (
+              <p
+                style={{
+                  color: "red",
+                  fontSize: "14px",
+                  marginBottom: "10px",
+                }}
+              >
+                {error}
+              </p>
+            )}
+
             <button type="submit">
-              Iniciar sesión
+
+              {loading
+                ? "Validando..."
+                : "Iniciar sesión"}
+
             </button>
 
           </form>
@@ -129,13 +203,10 @@ function Login() {
             Solicitar acceso
           </button>
 
-          <div className="footer-logo">
-            AgroSmart Urabá
-          </div>
-
         </div>
 
       </div>
+
     </div>
   );
 }
