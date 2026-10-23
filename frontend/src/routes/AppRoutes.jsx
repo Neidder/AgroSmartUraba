@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "../pages/Login";
@@ -10,51 +11,34 @@ import Cosechas from "../pages/Cosechas";
 import Economia from "../pages/Economia";
 import Usuarios from "../pages/Usuarios";
 
+import RutaProtegida from "../components/RutaProtegida";
+
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Página pública */}
         <Route path="/" element={<Login />} />
 
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
+        {/* Páginas para usuarios autenticados */}
+        <Route element={<RutaProtegida />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/productores" element={<Productores />} />
+          <Route path="/fincas" element={<Fincas />} />
+          <Route path="/cultivos" element={<Cultivos />} />
+          <Route path="/actividades" element={<Actividades />} />
+          <Route path="/cosechas" element={<Cosechas />} />
+          <Route path="/economia" element={<Economia />} />
+        </Route>
 
+        {/* Solo para administradores */}
         <Route
-          path="/productores"
-          element={<Productores />}
-        />
-
-        <Route
-          path="/fincas"
-          element={<Fincas />}
-        />
-
-        <Route
-          path="/cultivos"
-          element={<Cultivos />}
-        />
-
-        <Route
-          path="/actividades"
-          element={<Actividades />}
-        />
-
-        <Route
-          path="/cosechas"
-          element={<Cosechas />}
-        />
-
-        <Route
-          path="/economia"
-          element={<Economia />}
-        />
-
-        <Route
-          path="/usuarios"
-          element={<Usuarios />}
-        />
+          element={
+            <RutaProtegida rolesPermitidos={["ADMINISTRADOR"]} />
+          }
+        >
+          <Route path="/usuarios" element={<Usuarios />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
