@@ -1,13 +1,14 @@
-from django.shortcuts import render
+
 from rest_framework import viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
+
 from .models import Productor
 from .serializers import ProductorSerializer
 
 
 class ProductorViewSet(viewsets.ModelViewSet):
     serializer_class = ProductorSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Productor.objects.all().order_by("-id")
@@ -21,4 +22,3 @@ class ProductorViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(activo=False)
 
         return queryset
-

@@ -1,0 +1,127 @@
+
+.solicitud-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #e8f5e9, #f5f8f2);
+  box-sizing: border-box;
+}
+
+.solicitud-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 35px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 10px 35px rgba(20, 70, 35, 0.12);
+  box-sizing: border-box;
+}
+
+.solicitud-logo {
+  text-align: center;
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+.solicitud-card h1 {
+  text-align: center;
+  color: #245c35;
+  margin-bottom: 10px;
+}
+
+.solicitud-descripcion {
+  color: #68736a;
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.solicitud-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.solicitud-card form > label {
+  color: #344b39;
+  font-weight: 600;
+  margin-top: 7px;
+}
+
+.solicitud-card input,
+.solicitud-card textarea {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #d5dfd7;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.solicitud-card textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.solicitud-card input:focus,
+.solicitud-card textarea:focus {
+  border-color: #39834b;
+  box-shadow: 0 0 0 3px rgba(57, 131, 75, 0.12);
+}
+
+.solicitud-card button {
+  width: 100%;
+  padding: 14px 20px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 50px;
+  background: #2f7d42;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.solicitud-card button:hover {
+  background: #246534;
+  transform: translateY(-1px);
+}
+
+.solicitud-card button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.solicitud-error {
+  color: #c62828;
+  font-size: 14px;
+}
+
+.solicitud-exito {
+  color: #23743a;
+  font-size: 14px;
+}
+
+.solicitud-volver {
+  display: block;
+  text-align: center;
+  margin-top: 22px;
+  color: #2f7d42;
+  text-decoration: none;
+}
+
+.solicitud-volver:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 520px) {
+  .solicitud-card {
+    padding: 25px 20px;
+  }
+}

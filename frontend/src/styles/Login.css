@@ -334,3 +334,29 @@
   font-size: 14px;
   overflow-wrap: anywhere;
 }
+
+
+.secondary-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 50px;
+  background: #2f7d42;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.secondary-btn:hover {
+  background: #246534;
+  color: #ffffff;
+  transform: translateY(-1px);
+}

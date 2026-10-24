@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/authService";
-import "./Login.css";
+import "../styles/Login.css";
+import { Link } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
@@ -178,15 +179,17 @@ function Login() {
             </button>
           </form>
 
-          <a href="#">¿Olvidaste tu contraseña?</a>
+            <Link to="/recuperar-contrasena">
+              ¿Olvidaste tu contraseña?
+            </Link>
 
           <div className="separator">
             <span>o</span>
           </div>
 
-          <button type="button" className="secondary-btn">
+          <Link to="/solicitar-acceso" className="secondary-btn">
             Solicitar acceso
-          </button>
+          </Link>
         </div>
       </div>
     </div>
