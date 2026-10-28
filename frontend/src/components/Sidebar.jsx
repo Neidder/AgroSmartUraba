@@ -9,6 +9,7 @@ const modulos = [
   { nombre: "Cultivos", ruta: "/cultivos", icono: "platano" },
   { nombre: "Actividades", ruta: "/actividades", icono: "▤" },
   { nombre: "Cosechas", ruta: "/cosechas", icono: "platano" },
+  { nombre: "Ventas", ruta: "/ventas", icono: "$" },
   { nombre: "Economía", ruta: "/economia", icono: "$" },
 ];
 

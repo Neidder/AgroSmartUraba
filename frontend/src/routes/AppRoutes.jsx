@@ -8,6 +8,7 @@ import Fincas from "../pages/Fincas";
 import Cultivos from "../pages/Cultivos";
 import Actividades from "../pages/Actividades";
 import Cosechas from "../pages/Cosechas";
+import Ventas from "../pages/Ventas";
 import Economia from "../pages/Economia";
 import Usuarios from "../pages/Usuarios";
 
@@ -46,6 +47,7 @@ function AppRoutes() {
             <Route path="/cultivos" element={<Cultivos />} />
             <Route path="/actividades" element={<Actividades />} />
             <Route path="/cosechas" element={<Cosechas />} />
+            <Route path="/ventas" element={<Ventas />} />
             <Route path="/economia" element={<Economia />} />
           </Route>
         </Route>
