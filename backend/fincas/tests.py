@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from productores.models import Productor
+from cultivos.models import Lote, TipoCultivo
 from .models import Finca
 
 
@@ -152,3 +153,21 @@ class FincaApiTests(APITestCase):
             status.HTTP_405_METHOD_NOT_ALLOWED,
         )
         self.assertTrue(Finca.objects.filter(pk=self.finca.pk).exists())
+
+    def test_no_permite_reducir_area_por_debajo_de_lotes_activos(self):
+        tipo_cultivo = TipoCultivo.objects.create(nombre="Banano")
+        Lote.objects.create(
+            finca=self.finca,
+            tipo_cultivo=tipo_cultivo,
+            nombre="Lote de prueba",
+            hectareas=Decimal("3.00"),
+        )
+
+        respuesta = self.client.patch(
+            reverse("finca-detail", kwargs={"pk": self.finca.pk}),
+            {"hectareas": "2.99"},
+            format="json",
+        )
+
+        self.assertEqual(respuesta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("hectareas", respuesta.data)

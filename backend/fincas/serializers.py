@@ -1,6 +1,7 @@
 
 from decimal import Decimal
 
+from django.db.models import Sum
 from rest_framework import serializers
 
 from productores.models import Productor
@@ -33,3 +34,15 @@ class FincaSerializer(serializers.ModelSerializer):
                 "Selecciona un productor activo."
             )
         return productor
+
+    def validate_hectareas(self, hectareas):
+        if self.instance:
+            area_lotes_activos = self.instance.lotes.filter(
+                activo=True,
+            ).aggregate(total=Sum("hectareas"))["total"] or Decimal("0")
+            if area_lotes_activos > hectareas:
+                raise serializers.ValidationError(
+                    "El área no puede ser menor que la suma de los lotes activos "
+                    f"({area_lotes_activos} ha)."
+                )
+        return hectareas

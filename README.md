@@ -47,6 +47,10 @@ migraciones.
   temporal.
 - Endpoints CRUD para productores, fincas, tipos de cultivo, lotes,
   actividades, cosechas, ventas, costos y pérdidas.
+- Gestión de tipos de cultivo y lotes con validación de fechas, selección de
+  registros activos y control del área total disponible de cada finca.
+- Los tipos de cultivo y lotes se desactivan en vez de borrarse físicamente
+  para conservar las relaciones y el historial de cosechas.
 - Registro de ventas con varias cosechas por productor, validación de
   disponibilidad, anulación sin borrar el historial y reporte de ingresos.
 - Administración de usuarios mediante API, restringida a usuarios autenticados
@@ -64,9 +68,12 @@ migraciones.
 - El módulo **Ventas** permite registrar, consultar, editar y anular ventas de
   cosechas, con datos opcionales del comprador, totales automáticos e informes
   de ingresos por productor y producto.
-- Las páginas de fincas, cultivos, actividades, cosechas, economía y usuarios
-  existen como vistas iniciales, pero aún no implementan la gestión de sus
-  datos desde el frontend.
+- El módulo **Fincas** permite registrar, consultar, editar y activar o
+  desactivar fincas.
+- El módulo **Cultivos** permite administrar tipos de cultivo y lotes, buscar
+  y filtrar registros, y controlar el área disponible de cada finca.
+- Las páginas de actividades, cosechas, economía y usuarios aún no implementan
+  la gestión completa de sus datos desde el frontend.
 - El panel muestra accesos a módulos y contadores de ejemplo; los contadores
   todavía no se consultan desde la API.
 
@@ -88,11 +95,10 @@ Las rutas se sirven desde `http://127.0.0.1:8000`:
 | Economía | `/api_economia/costos-produccion/`, `/api_economia/perdidas-agricolas/` |
 
 Los endpoints de usuarios requieren el encabezado
-`Authorization: Token <token>` y el rol `ADMINISTRADOR`. El endpoint de
-productores también requiere autenticación. Los endpoints de fincas, cultivos,
-actividades, cosechas y economía están configurados actualmente para permitir
-acceso sin autenticación; revisa esos permisos antes de publicar el sistema en
-un entorno expuesto. La API de ventas requiere autenticación.
+`Authorization: Token <token>` y el rol `ADMINISTRADOR`. Las API de productores,
+fincas, cultivos y ventas requieren autenticación. Las API de actividades,
+cosechas y economía todavía permiten acceso sin autenticación; revisa esos
+permisos antes de publicar el sistema en un entorno expuesto.
 
 ## Requisitos
 
