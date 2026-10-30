@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import "../styles/Productores.css";
-
-const API_URL = "http://127.0.0.1:8000/api_productores/productores/";
+import { getApiErrorMessage } from "../services/api";
+import {
+  actualizarEstadoProductor,
+  actualizarProductor,
+  crearProductor,
+  listarProductores,
+} from "../services/productoresService";
 
 const formularioInicial = {
   tipo_documento: "CC",
@@ -28,37 +33,49 @@ function Productores() {
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
-  const token = localStorage.getItem("token");
+  function mostrarErrorCarga(err) {
+    setError(
+      getApiErrorMessage(
+        err,
+        "No fue posible cargar los productores.",
+      ),
+    );
+  }
 
   async function cargarProductores() {
-    setCargando(true);
-    setError("");
-
     try {
-      const respuesta = await fetch(API_URL, {
-        headers: token
-          ? { Authorization: `Token ${token}` }
-          : {},
-      });
-
-      if (!respuesta.ok) {
-        throw new Error("No fue posible cargar los productores.");
-      }
-
-      const datos = await respuesta.json();
-
-      setProductores(Array.isArray(datos) ? datos : datos.results || []);
+      const datos = await listarProductores();
+      setProductores(datos);
     } catch (err) {
-      setError(
-        `${err.message} Verifica que Django esté funcionando y que la URL de la API sea correcta.`
-      );
+      mostrarErrorCarga(err);
     } finally {
       setCargando(false);
     }
   }
 
   useEffect(() => {
-    cargarProductores();
+    let vigente = true;
+
+    listarProductores()
+      .then((datos) => {
+        if (vigente) {
+          setProductores(datos);
+        }
+      })
+      .catch((err) => {
+        if (vigente) {
+          mostrarErrorCarga(err);
+        }
+      })
+      .finally(() => {
+        if (vigente) {
+          setCargando(false);
+        }
+      });
+
+    return () => {
+      vigente = false;
+    };
   }, []);
 
   function cambiarCampo(evento) {
@@ -112,36 +129,11 @@ function Productores() {
     setMensaje("");
 
     const editando = productorEditando !== null;
-    const url = editando ? `${API_URL}${productorEditando}/` : API_URL;
-
     try {
-      const respuesta = await fetch(url, {
-        method: editando ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Token ${token}` } : {}),
-        },
-        body: JSON.stringify(formulario),
-      });
-
-      const datos = await respuesta.json().catch(() => ({}));
-
-      if (!respuesta.ok) {
-        const detalle = Object.entries(datos)
-          .map(([campo, errores]) => {
-            const texto = Array.isArray(errores)
-              ? errores.join(", ")
-              : typeof errores === "string"
-                ? errores
-                : JSON.stringify(errores);
-
-            return `${campo}: ${texto}`;
-          })
-          .join(" | ");
-
-        throw new Error(
-          detalle || "No fue posible guardar el productor."
-        );
+      if (editando) {
+        await actualizarProductor(productorEditando, formulario);
+      } else {
+        await crearProductor(formulario);
       }
 
       setMostrarFormulario(false);
@@ -155,7 +147,9 @@ function Productores() {
 
       await cargarProductores();
     } catch (err) {
-      setError(err.message);
+      setError(
+        getApiErrorMessage(err, "No fue posible guardar el productor."),
+      );
     } finally {
       setGuardando(false);
     }
@@ -176,21 +170,7 @@ function Productores() {
     setMensaje("");
 
     try {
-      const respuesta = await fetch(`${API_URL}${productor.id}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Token ${token}` } : {}),
-        },
-        body: JSON.stringify({ activo: !productor.activo }),
-      });
-
-      if (!respuesta.ok) {
-        const datos = await respuesta.json().catch(() => ({}));
-        throw new Error(
-          datos.detail || "No fue posible cambiar el estado del productor."
-        );
-      }
+      await actualizarEstadoProductor(productor.id, !productor.activo);
 
       setMensaje(
         `Productor ${productor.activo ? "desactivado" : "activado"} correctamente.`
@@ -198,7 +178,12 @@ function Productores() {
 
       await cargarProductores();
     } catch (err) {
-      setError(err.message);
+      setError(
+        getApiErrorMessage(
+          err,
+          "No fue posible cambiar el estado del productor.",
+        ),
+      );
     }
   }
 

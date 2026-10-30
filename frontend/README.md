@@ -1,16 +1,49 @@
-# React + Vite
+# Frontend de AgroSmart Urabá
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Interfaz web construida con React, React Router y Vite. Los estilos se
+implementan con CSS propio; Tailwind CSS no forma parte de las dependencias.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js `^20.19.0` o `>=22.12.0`.
+- npm.
 
-## React Compiler
+## Desarrollo local
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Desde esta carpeta instala las dependencias:
 
-## Expanding the Oxlint configuration
+```powershell
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Configura la dirección del backend copiando `.env.example` a `.env` y
+ajustando el valor según tu entorno:
+
+```dotenv
+VITE_API_URL=http://127.0.0.1:8000
+```
+
+En PowerShell puedes crear el archivo local con:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+`.env` está excluido de Git; `.env.example` sí se conserva versionado.
+
+Inicia la aplicación:
+
+```powershell
+npm run dev
+```
+
+Otros comandos disponibles:
+
+```powershell
+npm run build
+npm run preview
+npm run lint
+```
+
+La URL del backend se configura en `src/services/api.js`. En desarrollo,
+Django debe permitir CORS para el origen de Vite.

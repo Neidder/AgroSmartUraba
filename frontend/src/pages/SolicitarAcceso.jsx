@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { solicitarAcceso } from "../services/authService";
+import { getApiErrorMessage } from "../services/api";
 import "../styles/SolicitarAcceso.css";
 
 function SolicitarAcceso() {
@@ -41,8 +42,10 @@ function SolicitarAcceso() {
       });
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-          "No se pudo enviar la solicitud. Intenta nuevamente."
+        getApiErrorMessage(
+          err,
+          "No se pudo enviar la solicitud. Intenta nuevamente.",
+        ),
       );
     } finally {
       setCargando(false);

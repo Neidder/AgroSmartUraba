@@ -11,7 +11,7 @@ from cosechas.models import Cosecha
 from cultivos.models import Lote, TipoCultivo
 from fincas.models import Finca
 from productores.models import Productor
-from .models import DetalleVenta, Venta
+from .models import DetalleVenta, PrecioProducto, Venta
 
 
 class VentaModelTests(TestCase):
@@ -116,6 +116,18 @@ class VentaApiTests(APITestCase):
             password="test-password",
         )
         self.client.force_authenticate(user=self.usuario)
+        self.administrador = get_user_model().objects.create_user(
+            username="admin-ventas",
+            password="prueba-segura-123",
+            rol="ADMINISTRADOR",
+        )
+        self.tarifa = PrecioProducto.objects.create(
+            tipo_cultivo=self.tipo_cultivo,
+            unidad_medida=Cosecha.UnidadMedida.KILOGRAMOS,
+            precio_unitario=Decimal("2500.00"),
+            vigente_desde=date(2026, 10, 1),
+            registrado_por=self.administrador,
+        )
         self.url = reverse("ventas-list")
         self.datos_venta = {
             "productor": self.productor.pk,
@@ -141,6 +153,14 @@ class VentaApiTests(APITestCase):
         self.assertEqual(respuesta.data["total"], "7500.00")
         self.assertEqual(respuesta.data["estado"], Venta.Estado.REGISTRADA)
         self.assertEqual(respuesta.data["registrada_por"], self.usuario.pk)
+        self.assertEqual(
+            respuesta.data["detalles"][0]["precio_unitario"],
+            "2500.00",
+        )
+        self.assertEqual(
+            respuesta.data["detalles"][0]["precio_aplicado"],
+            self.tarifa.pk,
+        )
 
     def test_no_permite_vender_mas_de_lo_cosechado(self):
         datos = {
@@ -192,7 +212,7 @@ class VentaApiTests(APITestCase):
         )
 
         self.assertEqual(respuesta.status_code, status.HTTP_200_OK)
-        self.assertEqual(respuesta.data["total"], "12000.00")
+        self.assertEqual(respuesta.data["total"], "10000.00")
 
     def test_no_permite_borrar_una_venta_sin_anularla(self):
         crear = self.client.post(
@@ -282,4 +302,156 @@ class VentaApiTests(APITestCase):
         self.assertEqual(
             respuesta.data["cosechas"][0]["cantidad_disponible"],
             "10.00",
+        )
+        self.assertEqual(
+            respuesta.data["cosechas"][0]["precio_unitario"],
+            "2500.00",
+        )
+
+    def test_usuario_no_administrador_no_puede_crear_tarifas(self):
+        respuesta = self.client.post(
+            reverse("precio-producto-list"),
+            {
+                "tipo_cultivo": self.tipo_cultivo.pk,
+                "unidad_medida": Cosecha.UnidadMedida.KILOGRAMOS,
+                "precio_unitario": "3100.00",
+                "vigente_desde": "2026-10-20",
+            },
+            format="json",
+        )
+
+        self.assertEqual(respuesta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_administrador_puede_crear_tarifa(self):
+        self.client.force_authenticate(user=self.administrador)
+
+        respuesta = self.client.post(
+            reverse("precio-producto-list"),
+            {
+                "tipo_cultivo": self.tipo_cultivo.pk,
+                "unidad_medida": Cosecha.UnidadMedida.KILOGRAMOS,
+                "precio_unitario": "3100.00",
+                "vigente_desde": "2026-10-20",
+            },
+            format="json",
+        )
+
+        self.assertEqual(respuesta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(respuesta.data["registrado_por"], self.administrador.pk)
+
+    def test_toma_tarifa_vigente_para_la_fecha_de_venta(self):
+        PrecioProducto.objects.create(
+            tipo_cultivo=self.tipo_cultivo,
+            unidad_medida=Cosecha.UnidadMedida.KILOGRAMOS,
+            precio_unitario=Decimal("3200.00"),
+            vigente_desde=date(2026, 10, 10),
+            registrado_por=self.administrador,
+        )
+        datos = {
+            **self.datos_venta,
+            "detalles": [
+                {
+                    "cosecha": self.cosecha.pk,
+                    "cantidad": "2.00",
+                    "precio_unitario": "1.00",
+                }
+            ],
+        }
+
+        respuesta = self.client.post(self.url, datos, format="json")
+
+        self.assertEqual(respuesta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(respuesta.data["total"], "6400.00")
+        self.assertEqual(
+            respuesta.data["detalles"][0]["precio_unitario"],
+            "3200.00",
+        )
+
+    def test_rechaza_venta_si_no_hay_tarifa_vigente(self):
+        cosecha_toneladas = Cosecha.objects.create(
+            lote=self.lote,
+            fecha_cosecha=date(2026, 10, 1),
+            cantidad=Decimal("10.00"),
+            unidad_medida=Cosecha.UnidadMedida.TONELADAS,
+        )
+        datos = {
+            **self.datos_venta,
+            "detalles": [
+                {
+                    "cosecha": cosecha_toneladas.pk,
+                    "cantidad": "1.00",
+                }
+            ],
+        }
+
+        respuesta = self.client.post(self.url, datos, format="json")
+
+        self.assertEqual(respuesta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("tarifa vigente", str(respuesta.data).lower())
+
+    def test_editar_venta_conserva_el_precio_historico(self):
+        crear = self.client.post(self.url, self.datos_venta, format="json")
+        self.assertEqual(crear.status_code, status.HTTP_201_CREATED)
+        PrecioProducto.objects.create(
+            tipo_cultivo=self.tipo_cultivo,
+            unidad_medida=Cosecha.UnidadMedida.KILOGRAMOS,
+            precio_unitario=Decimal("4000.00"),
+            vigente_desde=date(2026, 10, 20),
+            registrado_por=self.administrador,
+        )
+
+        editar = self.client.put(
+            reverse("ventas-detail", kwargs={"pk": crear.data["id"]}),
+            {
+                **self.datos_venta,
+                "comprador_nombre": "Comprador actualizado",
+                "detalles": [
+                    {
+                        "cosecha": self.cosecha.pk,
+                        "cantidad": "4.00",
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(editar.status_code, status.HTTP_200_OK)
+        self.assertEqual(editar.data["total"], "10000.00")
+        self.assertEqual(
+            editar.data["detalles"][0]["precio_aplicado"],
+            self.tarifa.pk,
+        )
+
+    def test_tarifas_se_separan_por_unidad(self):
+        cosecha_cajas = Cosecha.objects.create(
+            lote=self.lote,
+            fecha_cosecha=date(2026, 10, 1),
+            cantidad=Decimal("5.00"),
+            unidad_medida=Cosecha.UnidadMedida.CAJAS,
+        )
+        tarifa_caja = PrecioProducto.objects.create(
+            tipo_cultivo=self.tipo_cultivo,
+            unidad_medida=Cosecha.UnidadMedida.CAJAS,
+            precio_unitario=Decimal("18000.00"),
+            vigente_desde=date(2026, 10, 1),
+            registrado_por=self.administrador,
+        )
+        datos = {
+            **self.datos_venta,
+            "detalles": [
+                {
+                    "cosecha": cosecha_cajas.pk,
+                    "cantidad": "2.00",
+                    "precio_unitario": "10.00",
+                }
+            ],
+        }
+
+        respuesta = self.client.post(self.url, datos, format="json")
+
+        self.assertEqual(respuesta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(respuesta.data["total"], "36000.00")
+        self.assertEqual(
+            respuesta.data["detalles"][0]["precio_aplicado"],
+            tarifa_caja.pk,
         )

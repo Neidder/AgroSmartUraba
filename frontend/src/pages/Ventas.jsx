@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { getApiErrorMessage } from "../services/api";
+import { listarTiposCultivo } from "../services/cultivosService";
 import {
   anularVenta,
+  crearPrecioProducto,
+  listarPreciosProducto,
   guardarVenta,
   listarVentas,
   obtenerOpcionesVenta,
@@ -19,7 +22,15 @@ const detalleVacio = () => ({
   cosecha: "",
   cantidad: "",
   precio_unitario: "",
+  preservar_precio: false,
 });
+
+const unidadesMedida = [
+  { valor: "KG", etiqueta: "Kilogramos" },
+  { valor: "TON", etiqueta: "Toneladas" },
+  { valor: "UND", etiqueta: "Unidades" },
+  { valor: "CAJAS", etiqueta: "Cajas" },
+];
 
 const formularioVacio = () => ({
   productor: "",
@@ -39,9 +50,19 @@ const formatoMoneda = (valor) =>
   }).format(Number(valor) || 0);
 
 function Ventas() {
+  const usuario = JSON.parse(localStorage.getItem("usuario") || "{}");
+  const esAdministrador = usuario.rol === "ADMINISTRADOR";
   const [opciones, setOpciones] = useState({
     productores: [],
     cosechas: [],
+  });
+  const [tiposCultivo, setTiposCultivo] = useState([]);
+  const [preciosProducto, setPreciosProducto] = useState([]);
+  const [formularioPrecio, setFormularioPrecio] = useState({
+    tipo_cultivo: "",
+    unidad_medida: "KG",
+    precio_unitario: "",
+    vigente_desde: fechaLocal(),
   });
   const [ventas, setVentas] = useState([]);
   const [reporte, setReporte] = useState({
@@ -81,6 +102,26 @@ function Ventas() {
         }
       });
 
+    if (esAdministrador) {
+      Promise.all([listarTiposCultivo({ activo: true }), listarPreciosProducto()])
+        .then(([tipos, precios]) => {
+          if (vigente) {
+            setTiposCultivo(tipos);
+            setPreciosProducto(precios);
+          }
+        })
+        .catch((err) => {
+          if (vigente) {
+            setError(
+              getApiErrorMessage(
+                err,
+                "No fue posible cargar el catálogo de precios.",
+              ),
+            );
+          }
+        });
+    }
+
     Promise.all([listarVentas(), obtenerReporteIngresos()])
       .then(([lista, resumen]) => {
         if (vigente) {
@@ -104,7 +145,7 @@ function Ventas() {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [esAdministrador]);
 
   async function actualizarListado(filtrosAplicados = filtros) {
     setCargando(true);
@@ -128,9 +169,9 @@ function Ventas() {
     }
   }
 
-  async function actualizarOpciones(ventaId) {
+  async function actualizarOpciones(ventaId, fechaVenta) {
     try {
-      const datos = await obtenerOpcionesVenta(ventaId);
+      const datos = await obtenerOpcionesVenta(ventaId, fechaVenta);
       setOpciones(datos);
       return datos;
     } catch (err) {
@@ -155,7 +196,10 @@ function Ventas() {
   async function abrirEdicion(venta) {
     setError("");
     setMensaje("");
-    const datosOpciones = await actualizarOpciones(venta.id);
+    const datosOpciones = await actualizarOpciones(
+      venta.id,
+      venta.fecha_venta,
+    );
     if (!datosOpciones) {
       return;
     }
@@ -171,6 +215,7 @@ function Ventas() {
         cosecha: String(detalle.cosecha),
         cantidad: detalle.cantidad,
         precio_unitario: detalle.precio_unitario,
+        preservar_precio: true,
       })),
     });
     setMostrarFormulario(true);
@@ -195,9 +240,56 @@ function Ventas() {
       ...actual,
       detalles: actual.detalles.map((detalle, posicion) =>
         posicion === indice
-          ? { ...detalle, [campo]: valor }
+          ? campo === "cosecha"
+            ? {
+                ...detalle,
+                cosecha: valor,
+                precio_unitario:
+                  opciones.cosechas.find(
+                    (cosecha) => String(cosecha.id) === valor,
+                  )?.precio_unitario || "",
+                preservar_precio: false,
+              }
+            : { ...detalle, [campo]: valor }
           : detalle,
       ),
+    }));
+  }
+
+  async function cambiarFechaVenta(fechaVenta) {
+    setFormulario((actual) => ({
+      ...actual,
+      fecha_venta: fechaVenta,
+      detalles: actual.detalles.map((detalle) =>
+        detalle.preservar_precio
+          ? detalle
+          : { ...detalle, precio_unitario: "" },
+      ),
+    }));
+
+    if (!fechaVenta) {
+      return;
+    }
+
+    const datosOpciones = await actualizarOpciones(ventaEditando, fechaVenta);
+    if (!datosOpciones) {
+      return;
+    }
+
+    setFormulario((actual) => ({
+      ...actual,
+      detalles: actual.detalles.map((detalle) => {
+        if (detalle.preservar_precio || !detalle.cosecha) {
+          return detalle;
+        }
+        const cosecha = datosOpciones.cosechas.find(
+          (opcion) => String(opcion.id) === detalle.cosecha,
+        );
+        return {
+          ...detalle,
+          precio_unitario: cosecha?.precio_unitario || "",
+        };
+      }),
     }));
   }
 
@@ -226,7 +318,6 @@ function Ventas() {
       detalles: formulario.detalles.map((detalle) => ({
         cosecha: Number(detalle.cosecha),
         cantidad: detalle.cantidad,
-        precio_unitario: detalle.precio_unitario,
       })),
     };
 
@@ -245,6 +336,32 @@ function Ventas() {
     } catch (err) {
       setError(
         getApiErrorMessage(err, "No fue posible guardar la venta."),
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function guardarPrecio(evento) {
+    evento.preventDefault();
+    setError("");
+    setMensaje("");
+    setGuardando(true);
+
+    try {
+      await crearPrecioProducto(formularioPrecio);
+      setMensaje("La tarifa se registró correctamente.");
+      setFormularioPrecio({
+        tipo_cultivo: "",
+        unidad_medida: "KG",
+        precio_unitario: "",
+        vigente_desde: fechaLocal(),
+      });
+      setPreciosProducto(await listarPreciosProducto());
+      await actualizarOpciones(null, formularioPrecio.vigente_desde);
+    } catch (err) {
+      setError(
+        getApiErrorMessage(err, "No fue posible registrar la tarifa."),
       );
     } finally {
       setGuardando(false);
@@ -338,6 +455,130 @@ function Ventas() {
           </div>
         </article>
       </section>
+
+      {esAdministrador && (
+        <section className="ventas-panel ventas-tarifas-panel">
+          <div className="ventas-panel-heading">
+            <div>
+              <h2>Tarifario de productos</h2>
+              <p>
+                Define precios por cultivo, unidad y fecha de vigencia. Las
+                tarifas aplicadas a ventas anteriores no se modifican.
+              </p>
+            </div>
+          </div>
+          <form className="ventas-tarifa-form" onSubmit={guardarPrecio}>
+            <label>
+              Cultivo
+              <select
+                value={formularioPrecio.tipo_cultivo}
+                onChange={(evento) =>
+                  setFormularioPrecio({
+                    ...formularioPrecio,
+                    tipo_cultivo: evento.target.value,
+                  })
+                }
+                required
+              >
+                <option value="">Selecciona un cultivo</option>
+                {tiposCultivo.map((tipo) => (
+                  <option key={tipo.id} value={tipo.id}>
+                    {tipo.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Unidad
+              <select
+                value={formularioPrecio.unidad_medida}
+                onChange={(evento) =>
+                  setFormularioPrecio({
+                    ...formularioPrecio,
+                    unidad_medida: evento.target.value,
+                  })
+                }
+              >
+                {unidadesMedida.map((unidad) => (
+                  <option key={unidad.valor} value={unidad.valor}>
+                    {unidad.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Precio por unidad (COP)
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={formularioPrecio.precio_unitario}
+                onChange={(evento) =>
+                  setFormularioPrecio({
+                    ...formularioPrecio,
+                    precio_unitario: evento.target.value,
+                  })
+                }
+                required
+              />
+            </label>
+            <label>
+              Vigente desde
+              <input
+                type="date"
+                value={formularioPrecio.vigente_desde}
+                onChange={(evento) =>
+                  setFormularioPrecio({
+                    ...formularioPrecio,
+                    vigente_desde: evento.target.value,
+                  })
+                }
+                required
+              />
+            </label>
+            <button
+              type="submit"
+              className="ventas-btn-principal"
+              disabled={guardando || tiposCultivo.length === 0}
+            >
+              {guardando ? "Guardando..." : "Agregar tarifa"}
+            </button>
+          </form>
+
+          {preciosProducto.length === 0 ? (
+            <div className="ventas-vacio compacto">
+              Aún no hay tarifas registradas.
+            </div>
+          ) : (
+            <div className="ventas-tabla-contenedor">
+              <table className="ventas-tabla">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Unidad</th>
+                    <th>Precio</th>
+                    <th>Vigente desde</th>
+                    <th>Registrado por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preciosProducto.map((precio) => (
+                    <tr key={precio.id}>
+                      <td>{precio.nombre_tipo_cultivo}</td>
+                      <td>{precio.unidad_medida_display}</td>
+                      <td className="ventas-monto">
+                        {formatoMoneda(precio.precio_unitario)}
+                      </td>
+                      <td>{precio.vigente_desde}</td>
+                      <td>{precio.nombre_registrado_por}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="ventas-panel ventas-filtros-panel">
         <div className="ventas-panel-heading">
@@ -582,12 +823,7 @@ function Ventas() {
                   <input
                     type="date"
                     value={formulario.fecha_venta}
-                    onChange={(evento) =>
-                      setFormulario({
-                        ...formulario,
-                        fecha_venta: evento.target.value,
-                      })
-                    }
+                    onChange={(evento) => cambiarFechaVenta(evento.target.value)}
                     required
                   />
                 </label>
@@ -679,6 +915,9 @@ function Ventas() {
                           {cosecha.nombre_producto} · {cosecha.nombre_lote} ·
                           {" "}disponible: {cosecha.cantidad_disponible}{" "}
                           {cosecha.unidad_medida_display}
+                          {cosecha.precio_unitario
+                            ? ` · ${formatoMoneda(cosecha.precio_unitario)}`
+                            : " · Sin tarifa vigente"}
                         </option>
                       ))}
                     </select>
@@ -697,19 +936,15 @@ function Ventas() {
                     />
                   </label>
                   <label>
-                    Precio unitario (COP)
+                    Precio unitario (COP /{" "}
+                    {cosechasProductor.find(
+                      (cosecha) => String(cosecha.id) === detalle.cosecha,
+                    )?.unidad_medida_display || "unidad"}
+                    )
                     <input
                       type="number"
-                      min="0.01"
-                      step="0.01"
                       value={detalle.precio_unitario}
-                      onChange={(evento) =>
-                        actualizarDetalle(
-                          indice,
-                          "precio_unitario",
-                          evento.target.value,
-                        )
-                      }
+                      readOnly
                       required
                     />
                   </label>

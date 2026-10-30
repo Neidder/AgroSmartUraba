@@ -59,6 +59,9 @@ migraciones.
   cambiar después de asociarse a ventas, para conservar el historial.
 - Registro de ventas con varias cosechas por productor, validación de
   disponibilidad, anulación sin borrar el historial y reporte de ingresos.
+- Tarifas de venta por tipo de cultivo, unidad de medida y fecha de vigencia;
+  solo los administradores pueden registrarlas. El precio queda guardado en
+  cada detalle de venta para conservar su valor histórico.
 - Administración de usuarios mediante API, restringida a usuarios autenticados
   cuyo rol sea `ADMINISTRADOR`.
 - Filtros en varios recursos, por ejemplo por estado, finca, lote, categoría,
@@ -73,7 +76,9 @@ migraciones.
   activar o desactivar registros.
 - El módulo **Ventas** permite registrar, consultar, editar y anular ventas de
   cosechas, con datos opcionales del comprador, totales automáticos e informes
-  de ingresos por productor y producto.
+  de ingresos por productor y producto. Los administradores también gestionan
+  el tarifario por producto, unidad y fecha; las ventas no permiten digitar ni
+  negociar un precio distinto al catálogo.
 - El módulo **Fincas** permite registrar, consultar, editar y activar o
   desactivar fincas.
 - El módulo **Cultivos** permite administrar tipos de cultivo y lotes, buscar
@@ -103,14 +108,16 @@ Las rutas se sirven desde `http://127.0.0.1:8000`:
 | Cultivos y lotes | `/api_cultivos/tipos-cultivo/`, `/api_cultivos/lotes/` |
 | Actividades | `/api_actividades/actividades/` |
 | Cosechas | `/api_cosechas/cosechas/` |
-| Ventas | `/api_ventas/ventas/`, `/api_ventas/ventas/opciones/`, `/api_ventas/ventas/reporte-ingresos/` |
+| Ventas | `/api_ventas/ventas/`, `/api_ventas/ventas/opciones/`, `/api_ventas/ventas/reporte-ingresos/`, `/api_ventas/precios/` |
 | Economía | `/api_economia/costos-produccion/`, `/api_economia/perdidas-agricolas/` |
 
 Los endpoints de usuarios requieren el encabezado
 `Authorization: Token <token>` y el rol `ADMINISTRADOR`. Las API de productores,
 fincas, cultivos, actividades, cosechas y ventas requieren autenticación. La
-API de economía todavía permite acceso sin autenticación; revisa ese permiso
-antes de publicar el sistema en un entorno expuesto.
+creación de tarifas en `/api_ventas/precios/` también requiere el rol
+`ADMINISTRADOR`; los demás usuarios autenticados pueden consultar el catálogo.
+La API de economía todavía permite acceso sin autenticación; revisa ese
+permiso antes de publicar el sistema en un entorno expuesto.
 
 ## Requisitos
 

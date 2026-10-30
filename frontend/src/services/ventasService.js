@@ -1,8 +1,29 @@
 import { api } from "./api";
 
-export async function obtenerOpcionesVenta(ventaId) {
+export async function obtenerOpcionesVenta(ventaId, fechaVenta) {
   const respuesta = await api.get("/api_ventas/ventas/opciones/", {
-    params: ventaId ? { venta: ventaId } : undefined,
+    params: {
+      ...(ventaId ? { venta: ventaId } : {}),
+      ...(fechaVenta ? { fecha_venta: fechaVenta } : {}),
+    },
+    headers: encabezadosAutenticacion(),
+  });
+
+  return respuesta.data;
+}
+
+export async function listarPreciosProducto() {
+  const respuesta = await api.get("/api_ventas/precios/", {
+    headers: encabezadosAutenticacion(),
+  });
+
+  return Array.isArray(respuesta.data)
+    ? respuesta.data
+    : respuesta.data.results || [];
+}
+
+export async function crearPrecioProducto(datos) {
+  const respuesta = await api.post("/api_ventas/precios/", datos, {
     headers: encabezadosAutenticacion(),
   });
 

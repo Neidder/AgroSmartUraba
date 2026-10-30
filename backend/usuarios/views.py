@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from .models import Usuario
 from .serializers import UsuarioSerializer
 from rest_framework.authtoken.models import Token
@@ -9,7 +9,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .login_serializer import LoginSerializer
-
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -20,10 +19,18 @@ from rest_framework import serializers
 from .models import Usuario, SolicitudAcceso
 
 
+class EsAdministrador(BasePermission):
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.rol == Usuario.Rol.ADMINISTRADOR
+        )
+
+
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all().order_by("id")
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated, EsAdministrador]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -41,7 +48,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(is_active=False)
 
         return queryset
-    
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def iniciar_sesion(request):
@@ -206,4 +214,3 @@ def restablecer_contrasena(request):
         {"mensaje": "Contraseña actualizada. Ya puedes iniciar sesión."},
         status=status.HTTP_200_OK,
     )
-

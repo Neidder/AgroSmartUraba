@@ -160,6 +160,47 @@
   padding: 21px 24px;
 }
 
+.ventas-tarifas-panel > .ventas-panel-heading {
+  padding-bottom: 16px;
+}
+
+.ventas-tarifa-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 0 24px 20px;
+}
+
+.ventas-tarifa-form label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: #45574a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ventas-tarifa-form input,
+.ventas-tarifa-form select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  color: #20352a;
+  background: white;
+  border: 1px solid #dfe7e0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.ventas-tarifa-form input:focus,
+.ventas-tarifa-form select:focus {
+  border-color: #408253;
+  outline: 2px solid #4082532b;
+}
+
 .ventas-panel-heading h2 {
   margin: 0 0 7px;
   font-size: 19px;
@@ -562,6 +603,10 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  .ventas-tarifa-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .ventas-producto-campo {
     grid-column: 1 / -1;
   }
@@ -601,7 +646,8 @@
   }
 
   .ventas-form-grid,
-  .ventas-detalle-form {
+  .ventas-detalle-form,
+  .ventas-tarifa-form {
     grid-template-columns: 1fr;
   }
 

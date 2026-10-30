@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { solicitarRecuperacion } from "../services/authService";
+import { getApiErrorMessage } from "../services/api";
 import "../styles/RecuperarContrasena.css";
 
 
@@ -27,8 +28,10 @@ function RecuperarContrasena() {
       setMensaje(respuesta.mensaje);
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-        "No se pudo procesar la solicitud. Intenta nuevamente."
+        getApiErrorMessage(
+          err,
+          "No se pudo procesar la solicitud. Intenta nuevamente.",
+        ),
       );
     } finally {
       setCargando(false);

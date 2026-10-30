@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { restablecerContrasena } from "../services/authService";
+import { getApiErrorMessage } from "../services/api";
 import "../styles/RecuperarContrasena.css";
 
 function RestablecerContrasena() {
@@ -53,8 +54,10 @@ function RestablecerContrasena() {
       }, 2500);
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-          "No se pudo cambiar la contraseña. Solicita un enlace nuevo."
+        getApiErrorMessage(
+          err,
+          "No se pudo cambiar la contraseña. Solicita un enlace nuevo.",
+        ),
       );
     } finally {
       setCargando(false);

@@ -8,14 +8,23 @@ from django.utils import timezone
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
 from productores.models import Productor
 from cultivos.models import TipoCultivo
 from cosechas.models import Cosecha
-from .models import DetalleVenta, Venta
-from .serializers import VentaSerializer
+from .models import DetalleVenta, PrecioProducto, Venta
+from .serializers import PrecioProductoSerializer, VentaSerializer
+
+
+class EsAdministrador(BasePermission):
+    def has_permission(self, request, view):
+        return (
+            request.user
+            and request.user.is_authenticated
+            and getattr(request.user, "rol", None) == "ADMINISTRADOR"
+        )
 
 
 class FiltrosVentaSerializer(serializers.Serializer):
@@ -55,6 +64,24 @@ class OpcionesVentaSerializer(serializers.Serializer):
         queryset=Venta.objects.filter(estado=Venta.Estado.REGISTRADA),
         required=False,
     )
+    fecha_venta = serializers.DateField(required=False)
+
+
+class PrecioProductoViewSet(viewsets.ModelViewSet):
+    serializer_class = PrecioProductoSerializer
+    queryset = PrecioProducto.objects.select_related(
+        "tipo_cultivo",
+        "registrado_por",
+    )
+    http_method_names = ["get", "post", "head", "options"]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [EsAdministrador()]
+        return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save(registrado_por=self.request.user)
 
 
 class VentaViewSet(viewsets.ModelViewSet):
@@ -120,6 +147,10 @@ class VentaViewSet(viewsets.ModelViewSet):
         serializer = OpcionesVentaSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         venta = serializer.validated_data.get("venta")
+        fecha_venta = serializer.validated_data.get(
+            "fecha_venta",
+            timezone.localdate(),
+        )
 
         productores = Productor.objects.filter(activo=True).order_by(
             "nombres",
@@ -147,6 +178,23 @@ class VentaViewSet(viewsets.ModelViewSet):
         }
 
         opciones_cosecha = []
+        tarifas = PrecioProducto.objects.filter(
+            tipo_cultivo_id__in={
+                cosecha.lote.tipo_cultivo_id for cosecha in cosechas
+            },
+            vigente_desde__lte=fecha_venta,
+        ).order_by(
+            "tipo_cultivo_id",
+            "unidad_medida",
+            "-vigente_desde",
+            "-id",
+        )
+        precios_por_clave = {}
+        for tarifa in tarifas:
+            clave = (tarifa.tipo_cultivo_id, tarifa.unidad_medida)
+            if clave not in precios_por_clave:
+                precios_por_clave[clave] = tarifa
+
         for cosecha in cosechas:
             disponible = cosecha.cantidad - cantidades_vendidas.get(
                 cosecha.pk,
@@ -155,6 +203,9 @@ class VentaViewSet(viewsets.ModelViewSet):
             if disponible <= 0:
                 continue
 
+            tarifa = precios_por_clave.get(
+                (cosecha.lote.tipo_cultivo_id, cosecha.unidad_medida)
+            )
             productor = cosecha.lote.finca.productor
             opciones_cosecha.append(
                 {
@@ -169,6 +220,10 @@ class VentaViewSet(viewsets.ModelViewSet):
                     "cantidad_disponible": f"{disponible:.2f}",
                     "unidad_medida": cosecha.unidad_medida,
                     "unidad_medida_display": cosecha.get_unidad_medida_display(),
+                    "precio_catalogo_id": tarifa.pk if tarifa else None,
+                    "precio_unitario": (
+                        f"{tarifa.precio_unitario:.2f}" if tarifa else None
+                    ),
                 }
             )
 

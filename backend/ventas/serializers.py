@@ -5,8 +5,83 @@ from django.db.models import Sum
 from rest_framework import serializers
 
 from cosechas.models import Cosecha
-from .models import DetalleVenta, Venta
+from .models import DetalleVenta, PrecioProducto, Venta
 
+
+class PrecioProductoSerializer(serializers.ModelSerializer):
+    nombre_tipo_cultivo = serializers.CharField(
+        source="tipo_cultivo.nombre",
+        read_only=True,
+    )
+    unidad_medida_display = serializers.CharField(
+        source="get_unidad_medida_display",
+        read_only=True,
+    )
+    nombre_registrado_por = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrecioProducto
+        fields = [
+            "id",
+            "tipo_cultivo",
+            "nombre_tipo_cultivo",
+            "unidad_medida",
+            "unidad_medida_display",
+            "precio_unitario",
+            "vigente_desde",
+            "registrado_por",
+            "nombre_registrado_por",
+            "fecha_creacion",
+        ]
+        read_only_fields = ["id", "registrado_por", "fecha_creacion"]
+        extra_kwargs = {
+            "precio_unitario": {
+                "min_value": Decimal("0.01"),
+                "max_digits": 12,
+                "decimal_places": 2,
+            },
+        }
+
+    def get_nombre_registrado_por(self, obj):
+        nombre = obj.registrado_por.get_full_name()
+        return nombre or obj.registrado_por.username
+
+    def validate_tipo_cultivo(self, tipo_cultivo):
+        if not tipo_cultivo.activo:
+            raise serializers.ValidationError(
+                "Solo se pueden registrar precios para cultivos activos."
+            )
+        return tipo_cultivo
+
+    def validate(self, attrs):
+        tipo_cultivo = attrs.get(
+            "tipo_cultivo",
+            self.instance.tipo_cultivo if self.instance else None,
+        )
+        unidad_medida = attrs.get(
+            "unidad_medida",
+            self.instance.unidad_medida if self.instance else None,
+        )
+        vigente_desde = attrs.get(
+            "vigente_desde",
+            self.instance.vigente_desde if self.instance else None,
+        )
+        existe = PrecioProducto.objects.filter(
+            tipo_cultivo=tipo_cultivo,
+            unidad_medida=unidad_medida,
+            vigente_desde=vigente_desde,
+        )
+        if self.instance:
+            existe = existe.exclude(pk=self.instance.pk)
+        if existe.exists():
+            raise serializers.ValidationError(
+                {
+                    "vigente_desde": (
+                        "Ya existe una tarifa para este cultivo, unidad y fecha."
+                    )
+                }
+            )
+        return attrs
 
 def validar_disponibilidad(detalles, productor, venta=None, bloquear=False):
     ids_cosechas = [detalle["cosecha"].pk for detalle in detalles]
@@ -84,6 +159,7 @@ class DetalleVentaSerializer(serializers.ModelSerializer):
         decimal_places=2,
         read_only=True,
     )
+    precio_aplicado = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = DetalleVenta
@@ -95,9 +171,10 @@ class DetalleVentaSerializer(serializers.ModelSerializer):
             "unidad_medida",
             "cantidad",
             "precio_unitario",
+            "precio_aplicado",
             "subtotal",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "precio_unitario", "precio_aplicado"]
         extra_kwargs = {
             "cantidad": {
                 "min_value": Decimal("0.01"),
@@ -165,8 +242,13 @@ class VentaSerializer(serializers.ModelSerializer):
             "productor",
             self.instance.productor if self.instance else None,
         )
-        detalles = attrs.get("detalles")
+        detalles_enviados = attrs.get("detalles")
+        fecha_venta = attrs.get(
+            "fecha_venta",
+            self.instance.fecha_venta if self.instance else None,
+        )
 
+        detalles = detalles_enviados
         if detalles is None and self.instance:
             detalles = [
                 {"cosecha": detalle.cosecha, "cantidad": detalle.cantidad}
@@ -188,8 +270,92 @@ class VentaSerializer(serializers.ModelSerializer):
                 {"productor": "No se pueden registrar ventas de un productor inactivo."}
             )
 
+        if detalles_enviados is not None:
+            self.asignar_precios_vigentes(
+                detalles_enviados,
+                fecha_venta,
+                venta=self.instance,
+            )
+
         validar_disponibilidad(detalles, productor, venta=self.instance)
         return attrs
+
+    @staticmethod
+    def asignar_precios_vigentes(detalles, fecha_venta, venta=None):
+        precios_existentes_por_cosecha = {}
+        if venta:
+            existentes = venta.detalles.select_related(
+                "precio_aplicado",
+            ).order_by("id")
+            for detalle_existente in existentes:
+                precios_existentes_por_cosecha.setdefault(
+                    detalle_existente.cosecha_id,
+                    [],
+                ).append(detalle_existente)
+
+        detalles_nuevos = []
+        for detalle in detalles:
+            existentes = precios_existentes_por_cosecha.get(
+                detalle["cosecha"].pk,
+                [],
+            )
+            if existentes:
+                detalle_existente = existentes.pop(0)
+                detalle["precio_unitario"] = detalle_existente.precio_unitario
+                if detalle_existente.precio_aplicado_id:
+                    detalle["precio_aplicado"] = (
+                        detalle_existente.precio_aplicado
+                    )
+                continue
+            detalles_nuevos.append(detalle)
+
+        claves = {
+            (
+                detalle["cosecha"].lote.tipo_cultivo_id,
+                detalle["cosecha"].unidad_medida,
+            )
+            for detalle in detalles_nuevos
+        }
+        ids_cultivos = {tipo_cultivo_id for tipo_cultivo_id, _ in claves}
+        unidades = {unidad for _, unidad in claves}
+        tarifas = (
+            PrecioProducto.objects.filter(
+                tipo_cultivo_id__in=ids_cultivos,
+                unidad_medida__in=unidades,
+                vigente_desde__lte=fecha_venta,
+            )
+            .order_by(
+                "tipo_cultivo_id",
+                "unidad_medida",
+                "-vigente_desde",
+                "-id",
+            )
+        )
+        precios_por_clave = {}
+        for precio in tarifas:
+            clave = (precio.tipo_cultivo_id, precio.unidad_medida)
+            if clave not in precios_por_clave:
+                precios_por_clave[clave] = precio
+
+        errores = []
+        for detalle in detalles_nuevos:
+            cosecha = detalle["cosecha"]
+            clave = (cosecha.lote.tipo_cultivo_id, cosecha.unidad_medida)
+            precio = precios_por_clave.get(clave)
+            if precio is None:
+                errores.append(
+                    f"No hay una tarifa vigente para "
+                    f"{cosecha.lote.tipo_cultivo.nombre} por "
+                    f"{cosecha.get_unidad_medida_display()} el "
+                    f"{fecha_venta:%d/%m/%Y}."
+                )
+                continue
+
+            detalle["precio_aplicado"] = precio
+            detalle["precio_unitario"] = precio.precio_unitario
+
+        if errores:
+            raise serializers.ValidationError({"detalles": errores})
 
     def create(self, validated_data):
         detalles = validated_data.pop("detalles")

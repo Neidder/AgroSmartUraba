@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login } from "../services/authService";
+import { getApiErrorMessage } from "../services/api";
 import "../styles/Login.css";
-import { Link } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
@@ -33,18 +33,20 @@ function Login() {
 
       navigate("/dashboard");
     } catch (err) {
-      console.error("ERROR LOGIN:", err);
-
       if (err.response) {
         // El servidor respondió: credenciales inválidas u otro error
         if (err.response.status === 400 || err.response.status === 401) {
           setError("Usuario o contraseña incorrectos.");
         } else {
-          setError("Error del servidor. Intenta de nuevo más tarde.");
+          setError(
+            getApiErrorMessage(
+              err,
+              "Error del servidor. Intenta de nuevo más tarde.",
+            ),
+          );
         }
       } else {
-        // Sin respuesta: backend apagado, CORS o sin conexión
-        setError("No se pudo conectar con el servidor. Verifica que el backend esté en ejecución.");
+        setError(getApiErrorMessage(err));
       }
     } finally {
       setLoading(false);

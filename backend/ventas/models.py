@@ -3,6 +3,51 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.conf import settings
 from django.db import models
 
+from cosechas.models import Cosecha
+
+
+class PrecioProducto(models.Model):
+    tipo_cultivo = models.ForeignKey(
+        "cultivos.TipoCultivo",
+        on_delete=models.PROTECT,
+        related_name="precios_venta",
+    )
+    unidad_medida = models.CharField(
+        max_length=5,
+        choices=Cosecha.UnidadMedida.choices,
+    )
+    precio_unitario = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+    vigente_desde = models.DateField()
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="precios_producto_registrados",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "precios_productos"
+        ordering = ["tipo_cultivo__nombre", "unidad_medida", "-vigente_desde"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(precio_unitario__gt=0),
+                name="precio_producto_mayor_cero",
+            ),
+            models.UniqueConstraint(
+                fields=["tipo_cultivo", "unidad_medida", "vigente_desde"],
+                name="precio_producto_fecha_unica",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.tipo_cultivo.nombre} - {self.get_unidad_medida_display()} "
+            f"- {self.precio_unitario}"
+        )
+
 
 class Venta(models.Model):
     class Estado(models.TextChoices):
@@ -69,6 +114,13 @@ class DetalleVenta(models.Model):
         "cosechas.Cosecha",
         on_delete=models.PROTECT,
         related_name="detalles_venta",
+    )
+    precio_aplicado = models.ForeignKey(
+        PrecioProducto,
+        on_delete=models.PROTECT,
+        related_name="detalles_venta",
+        null=True,
+        blank=True,
     )
     cantidad = models.DecimalField(max_digits=12, decimal_places=2)
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
