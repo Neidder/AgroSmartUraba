@@ -42,6 +42,7 @@ class Actividad(models.Model):
         default=0,
     )
     observaciones = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
