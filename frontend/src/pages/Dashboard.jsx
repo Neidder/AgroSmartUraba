@@ -1,7 +1,22 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getApiErrorMessage } from "../services/api";
+import {
+  listarActividades,
+  listarFincas,
+  listarLotes,
+  listarProductores,
+  obtenerReporteIngresos,
+} from "../services/dashboardService";
 import "../styles/Dashboard.css";
+
+const formatoMoneda = (monto) =>
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(Number(monto || 0));
 
 function IconoAgro({ tipo }) {
   if (tipo === "persona") {
@@ -65,25 +80,105 @@ function IconoAgro({ tipo }) {
 }
 
 function Dashboard() {
-  const [usuario, setUsuario] = useState(null);
-
-  const [indicadores] = useState({
-    productores: 0,
-    fincas: 0,
-    cultivos: 0,
-    cosechas: 0,
-  });
-
-  useEffect(() => {
+  const [usuario] = useState(() => {
     try {
       const usuarioGuardado = localStorage.getItem("usuario");
-
-      if (usuarioGuardado) {
-        setUsuario(JSON.parse(usuarioGuardado));
-      }
+      return usuarioGuardado ? JSON.parse(usuarioGuardado) : null;
     } catch {
-      setUsuario(null);
+      return null;
     }
+  });
+
+  const [indicadores, setIndicadores] = useState({
+    productores: null,
+    fincas: null,
+    lotes: null,
+    actividades: null,
+  });
+  const [reporteVentas, setReporteVentas] = useState(null);
+  const [actividadesRecientes, setActividadesRecientes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [periodoVentas, setPeriodoVentas] = useState(null);
+
+  useEffect(() => {
+    let vigente = true;
+
+    async function cargarDashboard() {
+      const hoy = new Date();
+      const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      const aFechaApi = (fecha) => {
+        const anio = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+        const dia = String(fecha.getDate()).padStart(2, "0");
+        return `${anio}-${mes}-${dia}`;
+      };
+      const periodo = {
+        desde: aFechaApi(primerDia),
+        hasta: aFechaApi(hoy),
+      };
+
+      setPeriodoVentas(periodo);
+      const resultados = await Promise.allSettled([
+        listarProductores(),
+        listarFincas(),
+        listarLotes(),
+        listarActividades({ activo: true }),
+        obtenerReporteIngresos(periodo),
+      ]);
+
+      if (!vigente) return;
+
+      const nombresRecursos = [
+        "productores",
+        "fincas",
+        "lotes",
+        "actividades",
+        "reporte de ventas",
+      ];
+      const errores = [];
+      const datos = resultados.map((resultado, indice) => {
+        if (resultado.status === "fulfilled") return resultado.value;
+        errores.push(
+          `${nombresRecursos[indice]}: ${getApiErrorMessage(
+            resultado.reason,
+            "no se pudieron cargar los datos.",
+          )}`,
+        );
+        return null;
+      });
+
+      const [productores, fincas, lotes, actividades, ventas] = datos;
+
+      setIndicadores({
+        productores: productores
+          ? productores.filter((productor) => productor.activo).length
+          : null,
+        fincas: fincas
+          ? fincas.filter((finca) => finca.activa).length
+          : null,
+        lotes: lotes ? lotes.filter((lote) => lote.activo).length : null,
+        actividades: actividades ? actividades.length : null,
+      });
+      setReporteVentas(ventas);
+      setActividadesRecientes(
+        actividades
+          ? [...actividades]
+              .sort((a, b) =>
+                b.fecha_actividad.localeCompare(a.fecha_actividad),
+              )
+              .slice(0, 5)
+          : [],
+      );
+      setErrorCarga(errores.join(" "));
+      setCargando(false);
+    }
+
+    cargarDashboard();
+
+    return () => {
+      vigente = false;
+    };
   }, []);
 
   const nombreUsuario =
@@ -149,8 +244,8 @@ function Dashboard() {
 
             <div className="agro-stat-content">
               <span>Productores</span>
-              <strong>{indicadores.productores}</strong>
-              <small>Productores registrados</small>
+              <strong>{cargando ? "…" : indicadores.productores ?? "—"}</strong>
+              <small>Productores activos</small>
             </div>
           </article>
 
@@ -159,8 +254,8 @@ function Dashboard() {
 
             <div className="agro-stat-content">
               <span>Fincas</span>
-              <strong>{indicadores.fincas}</strong>
-              <small>Fincas registradas</small>
+              <strong>{cargando ? "…" : indicadores.fincas ?? "—"}</strong>
+              <small>Fincas activas</small>
             </div>
           </article>
 
@@ -170,9 +265,9 @@ function Dashboard() {
             </div>
 
             <div className="agro-stat-content">
-              <span>Cultivos</span>
-              <strong>{indicadores.cultivos}</strong>
-              <small>Cultivos registrados</small>
+              <span>Lotes</span>
+              <strong>{cargando ? "…" : indicadores.lotes ?? "—"}</strong>
+              <small>Lotes activos</small>
             </div>
           </article>
 
@@ -182,12 +277,98 @@ function Dashboard() {
             </div>
 
             <div className="agro-stat-content">
-              <span>Cosechas</span>
-              <strong>{indicadores.cosechas}</strong>
-              <small>Cosechas registradas</small>
+              <span>Actividades</span>
+              <strong>
+                {cargando ? "…" : indicadores.actividades ?? "—"}
+              </strong>
+              <small>Actividades activas</small>
             </div>
           </article>
         </div>
+      </section>
+
+      {errorCarga && (
+        <div className="agro-dashboard-alerta" role="alert">
+          Algunos datos no están disponibles. {errorCarga}
+        </div>
+      )}
+
+      <section className="agro-dashboard-summary">
+        <article className="agro-panel agro-sales-summary">
+          <div className="agro-panel-heading">
+            <div>
+              <h2>Ventas del mes</h2>
+              <p>
+                {periodoVentas
+                  ? `${periodoVentas.desde} — ${periodoVentas.hasta}`
+                  : "Calculando período…"}
+              </p>
+            </div>
+            <Link to="/ventas" className="agro-summary-link">
+              Ver ventas <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+          <div className="agro-sales-values">
+            <div>
+              <small>Ingresos registrados</small>
+              <strong>
+                {cargando
+                  ? "Cargando…"
+                  : reporteVentas
+                    ? formatoMoneda(reporteVentas.total_ingresos)
+                    : "No disponible"}
+              </strong>
+            </div>
+            <div>
+              <small>Ventas completadas</small>
+              <strong>
+                {cargando
+                  ? "…"
+                  : reporteVentas
+                    ? reporteVentas.cantidad_ventas
+                    : "—"}
+              </strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="agro-panel agro-recent-activities">
+          <div className="agro-panel-heading">
+            <div>
+              <h2>Actividades recientes</h2>
+              <p>Últimas labores registradas</p>
+            </div>
+            <Link to="/actividades" className="agro-summary-link">
+              Ver todas <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+          {cargando ? (
+            <p className="agro-dashboard-empty">Cargando actividades…</p>
+          ) : actividadesRecientes.length === 0 ? (
+            <p className="agro-dashboard-empty">
+              No hay actividades recientes para mostrar.
+            </p>
+          ) : (
+            <ul className="agro-recent-list">
+              {actividadesRecientes.map((actividad) => (
+                <li key={actividad.id}>
+                  <span className="agro-recent-icon" aria-hidden="true">
+                    ▤
+                  </span>
+                  <div>
+                    <strong>{actividad.tipo_display}</strong>
+                    <small>
+                      {actividad.nombre_lote} · {actividad.descripcion}
+                    </small>
+                  </div>
+                  <time dateTime={actividad.fecha_actividad}>
+                    {actividad.fecha_actividad}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
       </section>
 
       <section className="agro-content-grid">
