@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
+import {
+  User,
+  Plus,
+  Search,
+  Eye,
+  Pencil,
+  UserX,
+  UserCheck,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import "../styles/Productores.css";
 
 const API_URL = "http://127.0.0.1:8000/api_productores/productores/";
+const POR_PAGINA = 10; // registros por página
 
 const formularioInicial = {
   tipo_documento: "CC",
@@ -16,12 +29,24 @@ const formularioInicial = {
   activo: true,
 };
 
+// Muestra hasta 5 números de página alrededor de la página actual.
+function numerosDePagina(actual, total) {
+  const max = 5;
+  let fin = Math.min(total, Math.max(1, actual - 2) + max - 1);
+  const inicio = Math.max(1, fin - max + 1);
+  fin = Math.min(total, fin);
+  return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
+}
+
 function Productores() {
   const [productores, setProductores] = useState([]);
   const [formulario, setFormulario] = useState(formularioInicial);
   const [productorEditando, setProductorEditando] = useState(null);
+  const [productorViendo, setProductorViendo] = useState(null);
   const [busqueda, setBusqueda] = useState("");
+  const [filtroMunicipio, setFiltroMunicipio] = useState("todos");
   const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [pagina, setPagina] = useState(1);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -29,24 +54,20 @@ function Productores() {
   const [mensaje, setMensaje] = useState("");
 
   const token = localStorage.getItem("token");
+  const authHeaders = token ? { Authorization: `Token ${token}` } : {};
 
   async function cargarProductores() {
     setCargando(true);
     setError("");
 
     try {
-      const respuesta = await fetch(API_URL, {
-        headers: token
-          ? { Authorization: `Token ${token}` }
-          : {},
-      });
+      const respuesta = await fetch(API_URL, { headers: authHeaders });
 
       if (!respuesta.ok) {
         throw new Error("No fue posible cargar los productores.");
       }
 
       const datos = await respuesta.json();
-
       setProductores(Array.isArray(datos) ? datos : datos.results || []);
     } catch (err) {
       setError(
@@ -63,7 +84,6 @@ function Productores() {
 
   function cambiarCampo(evento) {
     const { name, value, type, checked } = evento.target;
-
     setFormulario((actual) => ({
       ...actual,
       [name]: type === "checkbox" ? checked : value,
@@ -92,7 +112,6 @@ function Productores() {
       observaciones: productor.observaciones || "",
       activo: productor.activo,
     });
-
     setError("");
     setMensaje("");
     setMostrarFormulario(true);
@@ -117,10 +136,7 @@ function Productores() {
     try {
       const respuesta = await fetch(url, {
         method: editando ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Token ${token}` } : {}),
-        },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(formulario),
       });
 
@@ -134,14 +150,11 @@ function Productores() {
               : typeof errores === "string"
                 ? errores
                 : JSON.stringify(errores);
-
             return `${campo}: ${texto}`;
           })
           .join(" | ");
 
-        throw new Error(
-          detalle || "No fue posible guardar el productor."
-        );
+        throw new Error(detalle || "No fue posible guardar el productor.");
       }
 
       setMostrarFormulario(false);
@@ -178,10 +191,7 @@ function Productores() {
     try {
       const respuesta = await fetch(`${API_URL}${productor.id}/`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Token ${token}` } : {}),
-        },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ activo: !productor.activo }),
       });
 
@@ -195,12 +205,16 @@ function Productores() {
       setMensaje(
         `Productor ${productor.activo ? "desactivado" : "activado"} correctamente.`
       );
-
       await cargarProductores();
     } catch (err) {
       setError(err.message);
     }
   }
+
+  // Municipios disponibles, tomados de los datos reales.
+  const municipios = [
+    ...new Set(productores.map((p) => (p.municipio || "").trim()).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, "es"));
 
   const productoresFiltrados = productores.filter((productor) => {
     const texto = [
@@ -208,74 +222,59 @@ function Productores() {
       productor.apellidos,
       productor.numero_documento,
       productor.telefono,
-      productor.municipio,
     ]
       .join(" ")
       .toLowerCase();
 
     const coincideBusqueda = texto.includes(busqueda.toLowerCase());
-
+    const coincideMunicipio =
+      filtroMunicipio === "todos" ||
+      (productor.municipio || "").trim() === filtroMunicipio;
     const coincideEstado =
       filtroEstado === "todos" ||
       (filtroEstado === "activos" && productor.activo) ||
       (filtroEstado === "inactivos" && !productor.activo);
 
-    return coincideBusqueda && coincideEstado;
+    return coincideBusqueda && coincideMunicipio && coincideEstado;
   });
 
-  const totalActivos = productores.filter((p) => p.activo).length;
-  const totalInactivos = productores.length - totalActivos;
+  // Paginación (en el navegador)
+  const total = productoresFiltrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const inicio = (paginaActual - 1) * POR_PAGINA;
+  const visibles = productoresFiltrados.slice(inicio, inicio + POR_PAGINA);
+  const desde = total === 0 ? 0 : inicio + 1;
+  const hasta = inicio + visibles.length;
+
+  function conFiltro(setter) {
+    return (valor) => {
+      setter(valor);
+      setPagina(1);
+    };
+  }
 
   return (
-    <main className="productores-page">
+    <div className="productores-page">
       <header className="productores-header">
-        <div>
-          <span className="productores-eyebrow">
-            GESTIÓN AGRÍCOLA INTELIGENTE
-          </span>
-          <h1>Productores</h1>
-          <p>Administra la información de los productores de Urabá.</p>
+        <div className="productores-titulo">
+          <User size={38} strokeWidth={1.6} />
+          <div>
+            <h1>Productores</h1>
+            <p>Gestiona la información de los agricultores de la región.</p>
+          </div>
         </div>
 
-        <button
-          className="productores-btn-primary"
-          onClick={nuevoProductor}
-        >
-          <span>＋</span> Nuevo productor
+        <button className="productores-btn-primary" onClick={nuevoProductor}>
+          <Plus size={18} /> Nuevo productor
         </button>
       </header>
-
-      <section className="productores-resumen">
-        <article className="productores-resumen-card">
-          <span className="productores-resumen-icon verde">👤</span>
-          <div>
-            <small>Total de productores</small>
-            <strong>{productores.length}</strong>
-          </div>
-        </article>
-
-        <article className="productores-resumen-card">
-          <span className="productores-resumen-icon azul">✓</span>
-          <div>
-            <small>Productores activos</small>
-            <strong>{totalActivos}</strong>
-          </div>
-        </article>
-
-        <article className="productores-resumen-card">
-          <span className="productores-resumen-icon gris">○</span>
-          <div>
-            <small>Productores inactivos</small>
-            <strong>{totalInactivos}</strong>
-          </div>
-        </article>
-      </section>
 
       {mensaje && (
         <div className="productores-alerta exito" role="status">
           {mensaje}
           <button onClick={() => setMensaje("")} aria-label="Cerrar mensaje">
-            ×
+            <X size={16} />
           </button>
         </div>
       )}
@@ -284,36 +283,39 @@ function Productores() {
         <div className="productores-alerta error" role="alert">
           {error}
           <button onClick={() => setError("")} aria-label="Cerrar error">
-            ×
+            <X size={16} />
           </button>
         </div>
       )}
 
       <section className="productores-panel">
-        <div className="productores-panel-header">
-          <div>
-            <h2>Listado de productores</h2>
-            <p>Consulta y administra los registros.</p>
-          </div>
-          <span className="productores-contador">
-            {productoresFiltrados.length} registros
-          </span>
-        </div>
-
         <div className="productores-filtros">
-          <div className="productores-busqueda">
-            <span>⌕</span>
+          <label className="productores-busqueda">
+            <Search size={18} />
             <input
               type="search"
-              placeholder="Buscar por nombre, documento, teléfono o municipio..."
+              placeholder="Buscar por nombre, cédula o teléfono..."
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => conFiltro(setBusqueda)(e.target.value)}
             />
-          </div>
+          </label>
+
+          <select
+            value={filtroMunicipio}
+            onChange={(e) => conFiltro(setFiltroMunicipio)(e.target.value)}
+            aria-label="Filtrar por municipio"
+          >
+            <option value="todos">Todos los municipios</option>
+            {municipios.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
 
           <select
             value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
+            onChange={(e) => conFiltro(setFiltroEstado)(e.target.value)}
             aria-label="Filtrar por estado"
           >
             <option value="todos">Todos los estados</option>
@@ -324,17 +326,12 @@ function Productores() {
 
         {cargando ? (
           <div className="productores-vacio">Cargando productores...</div>
-        ) : productoresFiltrados.length === 0 ? (
+        ) : total === 0 ? (
           <div className="productores-vacio">
-            <span>♙</span>
+            <User size={38} strokeWidth={1.4} />
             <h3>No hay productores para mostrar</h3>
-            <p>
-              Registra un productor nuevo o cambia los filtros de búsqueda.
-            </p>
-            <button
-              className="productores-btn-primary"
-              onClick={nuevoProductor}
-            >
+            <p>Registra un productor nuevo o cambia los filtros de búsqueda.</p>
+            <button className="productores-btn-primary" onClick={nuevoProductor}>
               Registrar productor
             </button>
           </div>
@@ -343,9 +340,9 @@ function Productores() {
             <table className="productores-tabla">
               <thead>
                 <tr>
-                  <th>Productor</th>
-                  <th>Documento</th>
-                  <th>Contacto</th>
+                  <th>Nombre</th>
+                  <th>Cédula</th>
+                  <th>Teléfono</th>
                   <th>Municipio</th>
                   <th>Estado</th>
                   <th>Acciones</th>
@@ -353,27 +350,21 @@ function Productores() {
               </thead>
 
               <tbody>
-                {productoresFiltrados.map((productor) => (
+                {visibles.map((productor) => (
                   <tr key={productor.id}>
                     <td>
-                      <div className="productores-persona">
-                        <div className="productores-avatar">
-                          {productor.nombres?.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <strong>
-                            {productor.nombres} {productor.apellidos}
-                          </strong>
-                          <small>{productor.correo || "Sin correo"}</small>
-                        </div>
-                      </div>
+                      <strong className="productores-nombre">
+                        {productor.nombres} {productor.apellidos}
+                      </strong>
+                      <small className="productores-sub">
+                        {productor.correo || "Sin correo"}
+                      </small>
                     </td>
 
                     <td>
-                      <strong>{productor.tipo_documento}</strong>
-                      <small className="productores-documento">
-                        {productor.numero_documento}
-                      </small>
+                      <span className="productores-doc">
+                        {productor.tipo_documento} {productor.numero_documento}
+                      </span>
                     </td>
 
                     <td>{productor.telefono || "No registrado"}</td>
@@ -392,23 +383,44 @@ function Productores() {
                     <td>
                       <div className="productores-acciones">
                         <button
-                          className="productores-btn-editar"
-                          onClick={() => editarProductor(productor)}
-                          title="Editar productor"
+                          className="productores-accion ver"
+                          onClick={() => setProductorViendo(productor)}
+                          title="Ver detalle"
+                          aria-label="Ver detalle"
                         >
-                          ✎
+                          <Eye size={17} />
                         </button>
 
                         <button
-                          className="productores-btn-estado"
+                          className="productores-accion editar"
+                          onClick={() => editarProductor(productor)}
+                          title="Editar productor"
+                          aria-label="Editar productor"
+                        >
+                          <Pencil size={17} />
+                        </button>
+
+                        <button
+                          className={`productores-accion ${
+                            productor.activo ? "desactivar" : "activar"
+                          }`}
                           onClick={() => cambiarEstado(productor)}
                           title={
                             productor.activo
                               ? "Desactivar productor"
                               : "Activar productor"
                           }
+                          aria-label={
+                            productor.activo
+                              ? "Desactivar productor"
+                              : "Activar productor"
+                          }
                         >
-                          {productor.activo ? "Desactivar" : "Activar"}
+                          {productor.activo ? (
+                            <UserX size={17} />
+                          ) : (
+                            <UserCheck size={17} />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -418,8 +430,82 @@ function Productores() {
             </table>
           </div>
         )}
+
+        {!cargando && total > 0 && (
+          <footer className="productores-paginacion">
+            <span>
+              Mostrando {desde} - {hasta} de {total}
+            </span>
+
+            <div className="productores-paginas">
+              <button
+                onClick={() => setPagina(paginaActual - 1)}
+                disabled={paginaActual === 1}
+                aria-label="Página anterior"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              {numerosDePagina(paginaActual, totalPaginas).map((n) => (
+                <button
+                  key={n}
+                  className={n === paginaActual ? "activa" : ""}
+                  onClick={() => setPagina(n)}
+                >
+                  {n}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setPagina(paginaActual + 1)}
+                disabled={paginaActual === totalPaginas}
+                aria-label="Página siguiente"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </footer>
+        )}
       </section>
 
+      {/* Modal: ver detalle */}
+      {productorViendo && (
+        <div className="productores-modal-fondo">
+          <section className="productores-modal" role="dialog" aria-modal="true">
+            <header className="productores-modal-header">
+              <div>
+                <span className="productores-eyebrow">DETALLE DEL PRODUCTOR</span>
+                <h2>
+                  {productorViendo.nombres} {productorViendo.apellidos}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="productores-modal-cerrar"
+                onClick={() => setProductorViendo(null)}
+                aria-label="Cerrar detalle"
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <dl className="productores-detalle">
+              <div><dt>Documento</dt><dd>{productorViendo.tipo_documento} {productorViendo.numero_documento}</dd></div>
+              <div><dt>Teléfono</dt><dd>{productorViendo.telefono || "No registrado"}</dd></div>
+              <div><dt>Correo</dt><dd>{productorViendo.correo || "No registrado"}</dd></div>
+              <div><dt>Municipio</dt><dd>{productorViendo.municipio || "No registrado"}</dd></div>
+              <div><dt>Dirección</dt><dd>{productorViendo.direccion || "No registrada"}</dd></div>
+              <div><dt>Estado</dt><dd>{productorViendo.activo ? "Activo" : "Inactivo"}</dd></div>
+              <div className="productores-campo-completo">
+                <dt>Observaciones</dt>
+                <dd>{productorViendo.observaciones || "Sin observaciones"}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+      )}
+
+      {/* Modal: crear / editar */}
       {mostrarFormulario && (
         <div className="productores-modal-fondo">
           <section
@@ -438,9 +524,7 @@ function Productores() {
                     ? "Editar productor"
                     : "Registrar productor"}
                 </h2>
-                <p>
-                  Completa los datos para guardar el registro.
-                </p>
+                <p>Completa los datos para guardar el registro.</p>
               </div>
 
               <button
@@ -449,7 +533,7 @@ function Productores() {
                 onClick={cancelarFormulario}
                 aria-label="Cerrar formulario"
               >
-                ×
+                <X size={18} />
               </button>
             </header>
 
@@ -595,7 +679,7 @@ function Productores() {
           </section>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 
