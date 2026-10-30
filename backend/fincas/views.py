@@ -1,13 +1,14 @@
-from django.shortcuts import render
 from rest_framework import viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.permissions import IsAuthenticated
+
 from .models import Finca
 from .serializers import FincaSerializer
 
 
 class FincaViewSet(viewsets.ModelViewSet):
     serializer_class = FincaSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Finca.objects.select_related("productor").order_by("-id")
@@ -26,3 +27,10 @@ class FincaViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(productor_id=productor_id)
 
         return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        self.get_object()
+        raise MethodNotAllowed(
+            "DELETE",
+            "Las fincas se deben desactivar para conservar sus relaciones.",
+        )

@@ -1,0 +1,500 @@
+.fincas-page {
+  min-height: 100%;
+  padding: 30px;
+  color: #20352a;
+}
+
+.fincas-page * {
+  box-sizing: border-box;
+}
+
+.fincas-header,
+.fincas-panel-header,
+.fincas-modal-header,
+.fincas-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.fincas-header {
+  margin-bottom: 26px;
+}
+
+.fincas-header h1 {
+  margin: 8px 0;
+  font-size: 30px;
+}
+
+.fincas-header p,
+.fincas-panel-header p {
+  margin: 0;
+  color: #819087;
+  font-size: 14px;
+}
+
+.fincas-eyebrow {
+  color: #408253;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+}
+
+.fincas-btn-principal,
+.fincas-btn-secundario {
+  min-height: 42px;
+  padding: 11px 17px;
+  border: 0;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fincas-btn-principal {
+  color: white;
+  background: #205c3b;
+}
+
+.fincas-btn-principal:hover {
+  background: #173f2e;
+}
+
+.fincas-btn-principal:disabled,
+.fincas-btn-secundario:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fincas-btn-secundario {
+  color: #45574a;
+  background: #edf1ed;
+}
+
+.fincas-resumen {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.fincas-resumen-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  padding: 22px;
+  background: white;
+  border: 1px solid #e6ece7;
+  border-radius: 14px;
+}
+
+.fincas-resumen-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 24px;
+}
+
+.fincas-resumen-icon.verde {
+  color: #24643d;
+  background: #e6f4e8;
+}
+
+.fincas-resumen-icon.azul {
+  color: #285c91;
+  background: #e3effb;
+}
+
+.fincas-resumen-icon.gris {
+  color: #68756c;
+  background: #edf0ed;
+}
+
+.fincas-resumen-card small,
+.fincas-resumen-card strong {
+  display: block;
+}
+
+.fincas-resumen-card small {
+  margin-bottom: 7px;
+  color: #819087;
+  font-size: 12px;
+}
+
+.fincas-resumen-card strong {
+  font-size: 26px;
+}
+
+.fincas-panel {
+  overflow: hidden;
+  margin-bottom: 24px;
+  background: white;
+  border: 1px solid #e6ece7;
+  border-radius: 15px;
+}
+
+.fincas-panel-header {
+  padding: 23px 24px;
+}
+
+.fincas-panel-header h2 {
+  margin: 0 0 7px;
+  font-size: 19px;
+}
+
+.fincas-contador {
+  padding: 7px 11px;
+  color: #205c3b;
+  background: #e9f5eb;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fincas-filtros {
+  display: flex;
+  gap: 13px;
+  padding: 0 24px 20px;
+}
+
+.fincas-busqueda {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid #e0e7e1;
+  border-radius: 9px;
+}
+
+.fincas-busqueda > span {
+  color: #819087;
+  font-size: 23px;
+}
+
+.fincas-busqueda input,
+.fincas-filtros select {
+  min-height: 43px;
+  color: #20352a;
+  background: white;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+}
+
+.fincas-busqueda input {
+  width: 100%;
+  outline: none;
+}
+
+.fincas-filtros select {
+  padding: 0 12px;
+  border: 1px solid #e0e7e1;
+  border-radius: 9px;
+}
+
+.fincas-tabla-contenedor {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fincas-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.fincas-tabla thead {
+  background: #f6f8f6;
+}
+
+.fincas-tabla th {
+  padding: 14px 18px;
+  color: #758278;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fincas-tabla td {
+  padding: 14px 18px;
+  border-top: 1px solid #edf1ed;
+  color: #405047;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.fincas-tabla td > strong,
+.fincas-tabla td > small {
+  display: block;
+}
+
+.fincas-tabla td > small {
+  margin-top: 4px;
+  color: #819087;
+  font-size: 11px;
+}
+
+.fincas-area {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fincas-estado {
+  display: inline-flex;
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.fincas-estado.activa {
+  color: #24643d;
+  background: #e6f4e8;
+}
+
+.fincas-estado.inactiva {
+  color: #68756c;
+  background: #edf0ed;
+}
+
+.fincas-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.fincas-btn-editar,
+.fincas-btn-estado {
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fincas-btn-editar {
+  color: #285c91;
+  background: #e3effb;
+}
+
+.fincas-btn-estado {
+  color: #45574a;
+  background: #edf1ed;
+}
+
+.fincas-vacio {
+  padding: 44px 20px;
+  color: #819087;
+  text-align: center;
+}
+
+.fincas-vacio > span {
+  color: #408253;
+  font-size: 30px;
+}
+
+.fincas-vacio h3 {
+  margin: 9px 0 5px;
+  color: #405047;
+}
+
+.fincas-vacio p {
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+.fincas-alerta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+  padding: 13px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.fincas-alerta.exito {
+  color: #24643d;
+  background: #e6f4e8;
+}
+
+.fincas-alerta.error {
+  color: #923d36;
+  background: #fbe9e7;
+}
+
+.fincas-alerta button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.fincas-modal-fondo {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  overflow-y: auto;
+  place-items: center;
+  padding: 24px;
+  background: #10251c99;
+}
+
+.fincas-modal {
+  width: min(700px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 25px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 70px #10251c40;
+}
+
+.fincas-modal-header {
+  margin-bottom: 22px;
+}
+
+.fincas-modal-header h2 {
+  margin: 7px 0 0;
+  color: #20352a;
+}
+
+.fincas-cerrar-modal {
+  width: 36px;
+  height: 36px;
+  color: #617067;
+  background: #edf1ed;
+  border: 0;
+  border-radius: 50%;
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.fincas-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.fincas-form-grid label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: #45574a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fincas-form-grid input,
+.fincas-form-grid select,
+.fincas-form-grid textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  color: #20352a;
+  background: white;
+  border: 1px solid #dfe7e0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.fincas-form-grid textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.fincas-form-grid input:focus,
+.fincas-form-grid select:focus,
+.fincas-form-grid textarea:focus {
+  border-color: #408253;
+  outline: 2px solid #4082532b;
+}
+
+.fincas-campo-completo {
+  grid-column: 1 / -1;
+}
+
+.fincas-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  cursor: pointer;
+}
+
+.fincas-checkbox input {
+  width: 17px;
+  min-height: 17px;
+  accent-color: #205c3b;
+}
+
+.fincas-modal-footer {
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+@media (max-width: 760px) {
+  .fincas-page {
+    padding: 20px;
+  }
+
+  .fincas-resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .fincas-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .fincas-page {
+    padding: 16px;
+  }
+
+  .fincas-panel-header {
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .fincas-filtros {
+    flex-direction: column;
+    padding: 0 18px 18px;
+  }
+
+  .fincas-filtros select {
+    min-height: 43px;
+  }
+
+  .fincas-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fincas-campo-completo {
+    grid-column: auto;
+  }
+
+  .fincas-modal-fondo {
+    padding: 12px;
+  }
+
+  .fincas-modal {
+    max-height: calc(100vh - 24px);
+    padding: 18px;
+  }
+}

@@ -1,5 +1,9 @@
 
+from decimal import Decimal
+
 from rest_framework import serializers
+
+from productores.models import Productor
 from .models import Finca
 
 
@@ -10,6 +14,22 @@ class FincaSerializer(serializers.ModelSerializer):
         model = Finca
         fields = "__all__"
         read_only_fields = ["id", "fecha_creacion"]
+        extra_kwargs = {
+            "hectareas": {
+                "min_value": Decimal("0.01"),
+                "max_digits": 10,
+                "decimal_places": 2,
+            },
+        }
 
     def get_nombre_productor(self, obj):
         return str(obj.productor)
+
+    def validate_productor(self, productor):
+        if not productor.activo and (
+            self.instance is None or self.instance.productor_id != productor.pk
+        ):
+            raise serializers.ValidationError(
+                "Selecciona un productor activo."
+            )
+        return productor
