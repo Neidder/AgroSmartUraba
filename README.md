@@ -51,6 +51,8 @@ migraciones.
   registros activos y control del área total disponible de cada finca.
 - Los tipos de cultivo y lotes se desactivan en vez de borrarse físicamente
   para conservar las relaciones y el historial de cosechas.
+- Gestión autenticada de actividades por lote, asignación automática del
+  responsable, filtros y archivo de registros sin borrarlos físicamente.
 - Registro de ventas con varias cosechas por productor, validación de
   disponibilidad, anulación sin borrar el historial y reporte de ingresos.
 - Administración de usuarios mediante API, restringida a usuarios autenticados
@@ -72,7 +74,10 @@ migraciones.
   desactivar fincas.
 - El módulo **Cultivos** permite administrar tipos de cultivo y lotes, buscar
   y filtrar registros, y controlar el área disponible de cada finca.
-- Las páginas de actividades, cosechas, economía y usuarios aún no implementan
+- El módulo **Actividades** permite registrar, consultar, editar y archivar
+  labores por lote, con responsable automático, filtros por tipo, fechas y
+  estado, y costos informativos que no se duplican en Economía.
+- Las páginas de cosechas, economía y usuarios aún no implementan
   la gestión completa de sus datos desde el frontend.
 - El panel muestra accesos a módulos y contadores de ejemplo; los contadores
   todavía no se consultan desde la API.
@@ -96,7 +101,7 @@ Las rutas se sirven desde `http://127.0.0.1:8000`:
 
 Los endpoints de usuarios requieren el encabezado
 `Authorization: Token <token>` y el rol `ADMINISTRADOR`. Las API de productores,
-fincas, cultivos y ventas requieren autenticación. Las API de actividades,
+fincas, cultivos, actividades y ventas requieren autenticación. Las API de
 cosechas y economía todavía permiten acceso sin autenticación; revisa esos
 permisos antes de publicar el sistema en un entorno expuesto.
 
