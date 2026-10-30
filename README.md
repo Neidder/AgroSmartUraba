@@ -53,6 +53,10 @@ migraciones.
   para conservar las relaciones y el historial de cosechas.
 - Gestión autenticada de actividades por lote, asignación automática del
   responsable, filtros y archivo de registros sin borrarlos físicamente.
+- Gestión autenticada de cosechas por lote, con filtros, unidades de medida,
+  fechas y validación de cantidades frente a ventas registradas.
+- Las cosechas no se borran físicamente y sus lotes y unidades no se pueden
+  cambiar después de asociarse a ventas, para conservar el historial.
 - Registro de ventas con varias cosechas por productor, validación de
   disponibilidad, anulación sin borrar el historial y reporte de ingresos.
 - Administración de usuarios mediante API, restringida a usuarios autenticados
@@ -77,10 +81,13 @@ migraciones.
 - El módulo **Actividades** permite registrar, consultar, editar y archivar
   labores por lote, con responsable automático, filtros por tipo, fechas y
   estado, y costos informativos que no se duplican en Economía.
-- Las páginas de cosechas, economía y usuarios aún no implementan
+- El módulo **Cosechas** permite registrar, consultar y editar la producción
+  por lote, con filtros por fecha y unidad, y resúmenes separados para cada
+  unidad de medida.
+- Las páginas de economía y usuarios aún no implementan
   la gestión completa de sus datos desde el frontend.
-- El panel muestra accesos a módulos y contadores de ejemplo; los contadores
-  todavía no se consultan desde la API.
+- El panel muestra conteos reales de productores, fincas, lotes y actividades
+  activos, ingresos y ventas del mes y actividades recientes.
 
 ## Rutas principales de la API
 
@@ -101,9 +108,9 @@ Las rutas se sirven desde `http://127.0.0.1:8000`:
 
 Los endpoints de usuarios requieren el encabezado
 `Authorization: Token <token>` y el rol `ADMINISTRADOR`. Las API de productores,
-fincas, cultivos, actividades y ventas requieren autenticación. Las API de
-cosechas y economía todavía permiten acceso sin autenticación; revisa esos
-permisos antes de publicar el sistema en un entorno expuesto.
+fincas, cultivos, actividades, cosechas y ventas requieren autenticación. La
+API de economía todavía permite acceso sin autenticación; revisa ese permiso
+antes de publicar el sistema en un entorno expuesto.
 
 ## Requisitos
 
