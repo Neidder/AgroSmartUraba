@@ -1,499 +1,775 @@
-.cosechas-page {
-  min-height: 100%;
-  padding: 30px;
-  color: #20352a;
+.ch-page {
+  color: #1c2b21;
 }
 
-.cosechas-page * {
+.ch-page * {
   box-sizing: border-box;
 }
 
-.cosechas-header,
-.cosechas-panel-header,
-.cosechas-modal-header,
-.cosechas-modal-footer {
+/* ==========================================================================
+   Encabezado
+   ========================================================================== */
+
+.ch-header,
+.ch-modal-header,
+.ch-modal-footer {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 18px;
 }
 
-.cosechas-header {
-  margin-bottom: 26px;
+.ch-header {
+  margin-bottom: 20px;
 }
 
-.cosechas-header h1 {
-  margin: 8px 0;
-  font-size: 30px;
+.ch-titulo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #0b4228;
 }
 
-.cosechas-header p,
-.cosechas-panel-header p {
+.ch-titulo h1 {
   margin: 0;
-  color: #819087;
-  font-size: 14px;
+  font-size: 28px;
 }
 
-.cosechas-eyebrow {
-  color: #408253;
+.ch-titulo p {
+  margin: 3px 0 0;
+  font-size: 14px;
+  color: #5f7366;
+}
+
+.ch-eyebrow {
+  color: #1f9d55;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 1.3px;
 }
 
-.cosechas-btn-principal,
-.cosechas-btn-secundario,
-.cosechas-btn-editar {
-  min-height: 40px;
-  padding: 10px 15px;
+/* ==========================================================================
+   Botones
+   ========================================================================== */
+
+.ch-btn-primary,
+.ch-btn-secundario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 18px;
   border: 0;
   border-radius: 9px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  white-space: nowrap;
 }
 
-.cosechas-btn-principal {
-  color: white;
-  background: #205c3b;
+.ch-btn-primary {
+  color: #fff;
+  background: #0f7a45;
+  box-shadow: 0 3px 8px rgba(15, 122, 69, 0.25);
 }
 
-.cosechas-btn-principal:hover {
-  background: #173f2e;
+.ch-btn-primary:hover {
+  background: #0b6338;
 }
 
-.cosechas-btn-principal:disabled,
-.cosechas-btn-secundario:disabled {
+.ch-btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.cosechas-btn-secundario {
+.ch-btn-secundario {
   color: #45574a;
   background: #edf1ed;
 }
 
-.cosechas-btn-editar {
-  min-height: 34px;
-  padding: 7px 10px;
-  color: #285c91;
-  background: #e8f1f8;
+/* ==========================================================================
+   Tarjetas
+   ========================================================================== */
+
+.ch-card {
+  background: #fff;
+  border: 1px solid #e5ece6;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(16, 60, 36, 0.05);
 }
 
-.cosechas-alerta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-  padding: 13px 16px;
-  border-radius: 9px;
-  font-size: 13px;
-}
+/* ==========================================================================
+   KPIs
+   ========================================================================== */
 
-.cosechas-alerta.exito {
-  color: #205c3b;
-  background: #e9f5eb;
-}
-
-.cosechas-alerta.error {
-  color: #8e2c2c;
-  background: #fff0ef;
-}
-
-.cosechas-alerta button {
-  padding: 0 4px;
-  color: inherit;
-  background: transparent;
-  border: 0;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.cosechas-resumen {
+.ch-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 15px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
-.cosechas-resumen-card {
+.ch-kpi {
   display: flex;
   align-items: center;
-  gap: 13px;
-  min-width: 0;
-  padding: 19px 16px;
-  background: white;
-  border: 1px solid #e6ece7;
-  border-radius: 14px;
+  gap: 14px;
+  padding: 16px;
 }
 
-.cosechas-resumen-icon {
+.ch-kpi-icon {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
   display: grid;
-  width: 43px;
-  height: 43px;
-  flex: 0 0 43px;
   place-items: center;
-  color: #24643d;
-  background: #e6f4e8;
-  border-radius: 12px;
-  font-size: 21px;
+  border-radius: 50%;
+  background: #0f7a45;
+  color: #fff;
 }
 
-.cosechas-resumen-card small,
-.cosechas-resumen-card strong,
-.cosechas-resumen-card span {
+.ch-kpi span {
   display: block;
-}
-
-.cosechas-resumen-card small {
-  margin-bottom: 5px;
-  color: #819087;
-  font-size: 11px;
-}
-
-.cosechas-resumen-card strong {
-  overflow-wrap: anywhere;
-  color: #20352a;
-  font-size: 22px;
-}
-
-.cosechas-resumen-card div > span {
-  margin-top: 4px;
-  color: #93a096;
-  font-size: 10px;
-}
-
-.cosechas-panel {
-  overflow: hidden;
-  margin-bottom: 24px;
-  background: white;
-  border: 1px solid #e6ece7;
-  border-radius: 15px;
-}
-
-.cosechas-panel-header {
-  padding: 23px 24px;
-}
-
-.cosechas-panel-header h2 {
-  margin: 0 0 7px;
-  font-size: 19px;
-}
-
-.cosechas-contador {
-  padding: 7px 11px;
-  color: #205c3b;
-  background: #e9f5eb;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.cosechas-filtros {
-  display: grid;
-  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr));
-  gap: 10px;
-  padding: 0 24px 20px;
-}
-
-.cosechas-filtros select,
-.cosechas-filtro-fecha,
-.cosechas-busqueda {
-  min-width: 0;
-  min-height: 42px;
-  padding: 0 11px;
-  color: #45574a;
-  background: #fbfcfb;
-  border: 1px solid #dfe7e0;
-  border-radius: 9px;
-  font: inherit;
-  font-size: 12px;
-}
-
-.cosechas-busqueda {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cosechas-busqueda span {
-  color: #819087;
-  font-size: 20px;
-}
-
-.cosechas-busqueda input {
-  width: 100%;
-  min-width: 0;
-  color: #20352a;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  font: inherit;
-}
-
-.cosechas-filtro-fecha {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.cosechas-filtro-fecha span {
-  color: #819087;
-  white-space: nowrap;
-}
-
-.cosechas-filtro-fecha input {
-  width: 100%;
-  min-width: 0;
-  color: #45574a;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  font-size: 12px;
-}
-
-.cosechas-tabla-contenedor {
-  overflow-x: auto;
-}
-
-.cosechas-tabla {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.cosechas-tabla th,
-.cosechas-tabla td {
-  padding: 15px 20px;
-  border-top: 1px solid #edf1ed;
   font-size: 13px;
+  color: #33463a;
 }
 
-.cosechas-tabla th {
-  color: #819087;
-  background: #fbfcfb;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.cosechas-tabla td strong,
-.cosechas-tabla td small {
+.ch-kpi strong {
   display: block;
+  font-size: 28px;
+  line-height: 1.2;
+  color: #0b4228;
 }
 
-.cosechas-tabla td strong {
-  color: #20352a;
+.ch-kpi small {
+  font-size: 12px;
+  color: #6b7f72;
 }
 
-.cosechas-tabla td small {
-  margin-top: 4px;
-  color: #819087;
-  font-size: 11px;
+.ch-up {
+  color: #1c7a43 !important;
 }
 
-.cosechas-cantidad {
-  font-weight: 700;
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+/* ==========================================================================
+   Pestañas
+   ========================================================================== */
+
+/* ==========================================================================
+   Filtros
+   ========================================================================== */
+
+.ch-filtros {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-.cosechas-observaciones {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.ch-busqueda {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 220px;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid #dbe5dd;
+  border-radius: 9px;
+  color: #6b7f72;
 }
 
-.cosechas-vacio {
-  padding: 40px 24px;
-  color: #819087;
-  text-align: center;
+.ch-busqueda:focus-within {
+  border-color: #1f9d55;
+  box-shadow: 0 0 0 3px rgba(31, 157, 85, 0.12);
+}
+
+.ch-busqueda input {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #1c2b21;
+  font: inherit;
   font-size: 14px;
 }
 
-.cosechas-vacio > span {
-  color: #438353;
-  font-size: 32px;
-}
-
-.cosechas-vacio h3 {
-  margin: 8px 0;
-  color: #20352a;
-}
-
-.cosechas-vacio p {
-  margin: 0;
-}
-
-.cosechas-modal-fondo {
-  position: fixed;
-  z-index: 20;
-  inset: 0;
-  display: grid;
-  overflow-y: auto;
-  padding: 24px;
-  place-items: center;
-  background: rgb(18 38 25 / 48%);
-}
-
-.cosechas-modal {
-  width: min(100%, 650px);
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
-  padding: 24px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
-}
-
-.cosechas-modal-header {
-  margin-bottom: 22px;
-}
-
-.cosechas-modal-header h2 {
-  margin: 7px 0 0;
-  font-size: 21px;
-}
-
-.cosechas-cerrar-modal {
-  width: 36px;
-  height: 36px;
-  color: #68756c;
-  background: #f0f3f0;
-  border: 0;
-  border-radius: 50%;
-  font-size: 23px;
+.ch-filtros select {
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid #dbe5dd;
+  border-radius: 9px;
+  background: #fff;
+  color: #1c2b21;
+  font: inherit;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.cosechas-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+.ch-filtros select:focus {
+  outline: none;
+  border-color: #1f9d55;
 }
 
-.cosechas-form-grid label {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 7px;
-  color: #45574a;
+/* ==========================================================================
+   Tabla
+   ========================================================================== */
+
+.ch-tabla-contenedor {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e5ece6;
+  border-radius: 10px;
+}
+
+.ch-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ch-tabla thead {
+  background: #f3f7f4;
+}
+
+.ch-tabla th {
+  padding: 14px 16px;
+  color: #33463a;
   font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ch-tabla td {
+  padding: 13px 16px;
+  border-top: 1px solid #edf1ee;
+  color: #33463a;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.ch-tabla tbody tr:hover {
+  background: #fafcfa;
+}
+
+.ch-nombre {
+  color: #0b4228;
+  font-size: 15px;
+}
+
+.ch-sub {
+  display: block;
+  margin-top: 3px;
+  color: #7a8c80;
+  font-size: 12px;
+}
+
+.ch-estado {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.ch-estado.activa {
+  color: #1c7a43;
+  background: #d8f2df;
+}
+
+.ch-estado.inactiva {
+  color: #8a6a55;
+  background: #f3eae2;
+}
+
+/* ==========================================================================
+   Acciones
+   ========================================================================== */
+
+.ch-acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.ch-accion {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+
+.ch-accion:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+}
+
+.ch-accion.ver {
+  background: #eef1ef;
+  color: #33463a;
+}
+
+.ch-accion.editar {
+  background: #e6f1fc;
+  color: #2b8bd9;
+}
+
+.ch-accion.desactivar {
+  background: #fdeaea;
+  color: #e5484d;
+}
+
+.ch-accion.activar {
+  background: #dff3e5;
+  color: #1c7a43;
+}
+
+/* ==========================================================================
+   Paginación
+   ========================================================================== */
+
+.ch-paginacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  color: #33463a;
+  font-size: 14px;
+}
+
+.ch-paginas {
+  display: flex;
+  gap: 6px;
+}
+
+.ch-paginas button {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid #dbe5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #1c2b21;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ch-paginas button:hover:not(:disabled) {
+  background: #f0f7f1;
+}
+
+.ch-paginas button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ch-paginas button.activa {
+  background: #0f7a45;
+  border-color: #0f7a45;
+  color: #fff;
   font-weight: 700;
 }
 
-.cosechas-form-grid input,
-.cosechas-form-grid select,
-.cosechas-form-grid textarea {
+/* ==========================================================================
+   Vacío
+   ========================================================================== */
+
+.ch-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 50px 20px;
+  text-align: center;
+  color: #7a8c80;
+}
+
+.ch-vacio h3 {
+  margin: 10px 0 6px;
+  color: #1c2b21;
+}
+
+.ch-vacio p {
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+/* ==========================================================================
+   Columna lateral
+   ========================================================================== */
+
+/* ==========================================================================
+   Alertas
+   ========================================================================== */
+
+.ch-alerta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.ch-alerta.exito {
+  color: #0f6a3b;
+  background: #e2f5e8;
+}
+
+.ch-alerta.error {
+  color: #963b32;
+  background: #fff0ed;
+}
+
+.ch-alerta a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.ch-alerta button {
+  display: grid;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Modales
+   ========================================================================== */
+
+.ch-modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(17, 35, 24, 0.55);
+}
+
+.ch-modal {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 26px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
+}
+
+.ch-modal-header {
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.ch-modal-header h2 {
+  margin: 8px 0 4px;
+  font-size: 22px;
+}
+
+.ch-modal-header p {
+  margin: 0;
+  color: #7a8c80;
+  font-size: 14px;
+}
+
+.ch-modal-cerrar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: #f0f3f0;
+  color: #45574a;
+  cursor: pointer;
+}
+
+.ch-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.ch-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #405146;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ch-form-grid input,
+.ch-form-grid select,
+.ch-form-grid textarea {
   width: 100%;
   min-height: 42px;
-  padding: 10px 11px;
-  color: #20352a;
-  background: #fbfcfb;
+  padding: 10px 12px;
   border: 1px solid #dfe7e0;
   border-radius: 8px;
+  outline: none;
+  background: #fff;
+  color: #1c2b21;
   font: inherit;
   font-size: 13px;
 }
 
-.cosechas-form-grid textarea {
+.ch-form-grid input:focus,
+.ch-form-grid select:focus,
+.ch-form-grid textarea:focus {
+  border-color: #1f9d55;
+  box-shadow: 0 0 0 3px rgba(31, 157, 85, 0.12);
+}
+
+.ch-form-grid textarea {
   resize: vertical;
 }
 
-.cosechas-form-grid input:focus,
-.cosechas-form-grid select:focus,
-.cosechas-form-grid textarea:focus,
-.cosechas-filtros select:focus {
-  border-color: #438353;
-  outline: 2px solid rgb(67 131 83 / 14%);
-}
-
-.cosechas-campo-completo {
+.ch-campo-completo {
   grid-column: 1 / -1;
 }
 
-.cosechas-ayuda-formulario {
-  margin: 17px 0 0;
-  padding: 12px;
-  color: #45574a;
-  background: #f3f7f3;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.5;
+.ch-form-grid .ch-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
 }
 
-.cosechas-modal-footer {
+.ch-checkbox input {
+  width: 17px;
+  min-height: 17px;
+}
+
+.ch-modal-footer {
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 24px;
   padding-top: 18px;
-  border-top: 1px solid #edf1ed;
+  border-top: 1px solid #edf0ed;
 }
 
-@media (max-width: 1100px) {
-  .cosechas-resumen {
+.ch-detalle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+}
+
+.ch-detalle dt {
+  margin-bottom: 4px;
+  color: #7a8c80;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ch-detalle dd {
+  margin: 0;
+  color: #1c2b21;
+  font-size: 14px;
+}
+
+@media (max-width: 1200px) {
+  .ch-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .cosechas-filtros {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .cosechas-busqueda {
-    grid-column: 1 / -1;
-  }
 }
 
-@media (max-width: 680px) {
-  .cosechas-page {
-    padding: 20px 14px;
-  }
 
-  .cosechas-header {
+@media (max-width: 600px) {
+  .ch-header {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .cosechas-resumen {
-    gap: 10px;
-  }
-
-  .cosechas-resumen-card {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 14px 12px;
-  }
-
-  .cosechas-panel-header {
-    align-items: flex-start;
-    padding: 18px 16px;
-  }
-
-  .cosechas-filtros {
+  .ch-kpis {
     grid-template-columns: 1fr;
-    padding: 0 16px 16px;
   }
 
-  .cosechas-busqueda {
+  .ch-form-grid,
+  .ch-detalle {
+    grid-template-columns: 1fr;
+  }
+
+  .ch-campo-completo {
     grid-column: auto;
   }
 
-  .cosechas-modal-fondo {
-    padding: 12px;
-  }
-
-  .cosechas-modal {
+  .ch-modal {
     padding: 19px;
   }
 
-  .cosechas-form-grid {
-    grid-template-columns: 1fr;
-  }
+}
 
-  .cosechas-campo-completo {
-    grid-column: auto;
+/* ==========================================================================
+   Específico de Cosechas
+   ========================================================================== */
+
+.ch-down {
+  color: #e5484d !important;
+}
+
+.ch-rango {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid #dbe5dd;
+  border-radius: 9px;
+  color: #6b7f72;
+}
+
+.ch-rango label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 10.5px;
+  line-height: 1.1;
+  color: #6b7f72;
+}
+
+.ch-rango input {
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #1c2b21;
+  font: inherit;
+  font-size: 13px;
+}
+
+.ch-obs {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Gráfica de barras: producción por cultivo */
+
+.ch-abajo {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.ch-card-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  font-size: 16px;
+  color: #0b4228;
+}
+
+.ch-grafica {
+  display: flex;
+  gap: 8px;
+}
+
+.ch-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ch-col-area {
+  width: 100%;
+  height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  border-bottom: 1px solid #dfe8e1;
+}
+
+.ch-col-valor {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #33463a;
+}
+
+.ch-col-barra {
+  width: min(70%, 96px);
+  border-radius: 8px 8px 0 0;
+  transition: height 0.3s;
+}
+
+.ch-col-nombre {
+  margin-top: 10px;
+  font-size: 13px;
+  text-align: center;
+  color: #33463a;
+  overflow-wrap: anywhere;
+}
+
+.ch-grafica-vacio {
+  margin: 0;
+  font-size: 13.5px;
+  color: #7a8c80;
+}
+
+.ch-nota {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #7a8c80;
+}
+
+/* Tarjeta de marca */
+
+.ch-banner {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 220px;
+  padding: 22px;
+  border-radius: 14px;
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(8, 52, 31, 0.35), rgba(8, 52, 31, 0.88)),
+    var(--ch-banner, none) center / cover,
+    #1f7a4a;
+}
+
+.ch-banner svg {
+  color: #9be37a;
+}
+
+.ch-banner h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.ch-banner p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+@media (max-width: 1000px) {
+  .ch-abajo {
+    grid-template-columns: 1fr;
   }
 }
