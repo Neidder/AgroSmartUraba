@@ -19,6 +19,8 @@ class CostoProduccionViewSet(viewsets.ModelViewSet):
         lote = self.request.query_params.get("lote")
         categoria = self.request.query_params.get("categoria")
         fecha = self.request.query_params.get("fecha_gasto")
+        desde = self.request.query_params.get("desde")
+        hasta = self.request.query_params.get("hasta")
 
         if lote:
             queryset = queryset.filter(lote_id=lote)
@@ -28,6 +30,12 @@ class CostoProduccionViewSet(viewsets.ModelViewSet):
 
         if fecha:
             queryset = queryset.filter(fecha_gasto=fecha)
+
+        if desde:
+            queryset = queryset.filter(fecha_gasto__gte=desde)
+
+        if hasta:
+            queryset = queryset.filter(fecha_gasto__lte=hasta)
 
         return queryset
 
@@ -43,6 +51,8 @@ class PerdidaAgricolaViewSet(viewsets.ModelViewSet):
         lote = self.request.query_params.get("lote")
         motivo = self.request.query_params.get("motivo")
         fecha = self.request.query_params.get("fecha_perdida")
+        desde = self.request.query_params.get("desde")
+        hasta = self.request.query_params.get("hasta")
 
         if lote:
             queryset = queryset.filter(lote_id=lote)
@@ -52,5 +62,11 @@ class PerdidaAgricolaViewSet(viewsets.ModelViewSet):
 
         if fecha:
             queryset = queryset.filter(fecha_perdida=fecha)
+
+        if desde:
+            queryset = queryset.filter(fecha_perdida__gte=desde)
+
+        if hasta:
+            queryset = queryset.filter(fecha_perdida__lte=hasta)
 
         return queryset
