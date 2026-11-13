@@ -11,6 +11,7 @@ export function useUsuario() {
   const esAdministrador = usuario.rol === "ADMINISTRADOR";
 
   return {
+    id: usuario.id ?? null,
     nombre,
     esAdministrador,
     rol: esAdministrador ? "Administrador" : "Trabajador",
