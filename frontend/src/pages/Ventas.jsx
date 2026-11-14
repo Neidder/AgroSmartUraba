@@ -1,997 +1,1114 @@
 import { useEffect, useState } from "react";
-import { getApiErrorMessage } from "../services/api";
-import { listarTiposCultivo } from "../services/cultivosService";
+import { Link } from "react-router-dom";
 import {
-  anularVenta,
-  crearPrecioProducto,
-  listarPreciosProducto,
-  guardarVenta,
-  listarVentas,
-  obtenerOpcionesVenta,
-  obtenerReporteIngresos,
-} from "../services/ventasService";
+  ShoppingCart,
+  Receipt,
+  Banknote,
+  TrendingUp,
+  Ban,
+  CalendarDays,
+  Tag,
+  Sprout,
+  Users,
+  Plus,
+  Search,
+  Eye,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
+import { useUsuario } from "../hooks/useUsuario";
 import "../styles/Ventas.css";
 
-const fechaLocal = () => {
-  const hoy = new Date();
-  const zonaHoraria = hoy.getTimezoneOffset() * 60000;
-  return new Date(hoy.getTime() - zonaHoraria).toISOString().slice(0, 10);
-};
+const API_BASE = "http://127.0.0.1:8000";
+const API_VENTAS = `${API_BASE}/api_ventas/ventas/`;
+const API_PRECIOS = `${API_BASE}/api_ventas/precios/`;
+const API_TIPOS = `${API_BASE}/api_cultivos/tipos-cultivo/`;
+const POR_PAGINA = 10;
 
-const detalleVacio = () => ({
-  cosecha: "",
-  cantidad: "",
-  precio_unitario: "",
-  preservar_precio: false,
-});
-
-const unidadesMedida = [
-  { valor: "KG", etiqueta: "Kilogramos" },
-  { valor: "TON", etiqueta: "Toneladas" },
-  { valor: "UND", etiqueta: "Unidades" },
-  { valor: "CAJAS", etiqueta: "Cajas" },
+const UNIDADES = [
+  ["KG", "Kilogramos"],
+  ["TON", "Toneladas"],
+  ["UND", "Unidades"],
+  ["CAJAS", "Cajas"],
 ];
 
-const formularioVacio = () => ({
-  productor: "",
-  fecha_venta: fechaLocal(),
-  comprador_nombre: "",
-  comprador_documento: "",
-  comprador_contacto: "",
-  detalles: [detalleVacio()],
-});
+const ETIQUETAS = {
+  productor: "Productor",
+  fecha_venta: "Fecha de venta",
+  comprador_nombre: "Comprador",
+  comprador_documento: "Documento del comprador",
+  comprador_contacto: "Contacto del comprador",
+  detalles: "Productos",
+  cosecha: "Cosecha",
+  cantidad: "Cantidad",
+  tipo_cultivo: "Cultivo",
+  unidad_medida: "Unidad",
+  precio_unitario: "Precio",
+  vigente_desde: "Vigente desde",
+  motivo: "Motivo",
+  estado: "Estado",
+};
 
-const formatoMoneda = (valor) =>
-  new Intl.NumberFormat("es-CO", {
+function hoyISO() {
+  const d = new Date();
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+function ventaInicial() {
+  return {
+    productor: "",
+    fecha_venta: hoyISO(),
+    comprador_nombre: "",
+    comprador_documento: "",
+    comprador_contacto: "",
+    lineas: [{ cosecha: "", cantidad: "" }],
+  };
+}
+
+function tarifaInicial() {
+  return { tipo_cultivo: "", unidad_medida: "KG", precio_unitario: "", vigente_desde: hoyISO() };
+}
+
+function listaDe(datos) {
+  return Array.isArray(datos) ? datos : datos?.results || [];
+}
+
+// Convierte cualquier forma de error del backend (texto, lista, objetos anidados) en frases.
+function aplanar(valor) {
+  if (valor === null || valor === undefined) return [];
+  if (typeof valor === "string") return [valor];
+  if (Array.isArray(valor)) return valor.flatMap(aplanar);
+  if (typeof valor === "object") {
+    return Object.entries(valor).flatMap(([campo, v]) =>
+      aplanar(v).map((t) => (ETIQUETAS[campo] ? `${ETIQUETAS[campo]}: ${t}` : t))
+    );
+  }
+  return [String(valor)];
+}
+
+function textoError(datos, porDefecto) {
+  if (!datos || typeof datos !== "object") return porDefecto;
+  if (typeof datos.detail === "string") return datos.detail;
+
+  const partes = Object.entries(datos).flatMap(([campo, v]) => {
+    const etiqueta = ETIQUETAS[campo];
+    return aplanar(v).map((t) => (etiqueta ? `${etiqueta}: ${t}` : t));
+  });
+
+  return partes.join(" | ") || porDefecto;
+}
+
+// Las fechas llegan como "AAAA-MM-DD": se arman a mano para evitar desfases de zona horaria.
+function formatearFecha(texto) {
+  if (!texto) return "—";
+  const [anio, mes, dia] = texto.split("-");
+  return `${dia}/${mes}/${anio}`;
+}
+
+function formatearFechaHora(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatearCOP(valor) {
+  return Number(valor || 0).toLocaleString("es-CO", {
     style: "currency",
     currency: "COP",
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(Number(valor) || 0);
+  });
+}
+
+function formatearCantidad(valor) {
+  return Number(valor || 0).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function mesDe(fecha) {
+  const [anio, mes] = fecha.split("-").map(Number);
+  return anio * 12 + (mes - 1);
+}
+
+function numerosDePagina(actual, total) {
+  const max = 5;
+  let fin = Math.min(total, Math.max(1, actual - 2) + max - 1);
+  const inicio = Math.max(1, fin - max + 1);
+  fin = Math.min(total, fin);
+  return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
+}
+
+function BarrasIngresos({ datos }) {
+  const maximo = Math.max(0, ...datos.map(([, valor]) => valor));
+  return (
+    <ul className="vt-barras">
+      {datos.map(([nombre, valor]) => (
+        <li key={nombre}>
+          <div className="vt-barra-texto">
+            <span>{nombre}</span>
+            <strong>{formatearCOP(valor)}</strong>
+          </div>
+          <div className="vt-barra">
+            <div style={{ width: `${maximo ? (valor / maximo) * 100 : 0}%` }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function Ventas() {
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "{}");
-  const esAdministrador = usuario.rol === "ADMINISTRADOR";
-  const [opciones, setOpciones] = useState({
-    productores: [],
-    cosechas: [],
-  });
-  const [tiposCultivo, setTiposCultivo] = useState([]);
-  const [preciosProducto, setPreciosProducto] = useState([]);
-  const [formularioPrecio, setFormularioPrecio] = useState({
-    tipo_cultivo: "",
-    unidad_medida: "KG",
-    precio_unitario: "",
-    vigente_desde: fechaLocal(),
-  });
+  const { esAdministrador } = useUsuario();
+
   const [ventas, setVentas] = useState([]);
-  const [reporte, setReporte] = useState({
-    cantidad_ventas: 0,
-    total_ingresos: "0.00",
-    por_productor: [],
-    por_producto: [],
-  });
-  const [filtros, setFiltros] = useState({ desde: "", hasta: "" });
-  const [formulario, setFormulario] = useState(formularioVacio);
+  const [precios, setPrecios] = useState([]);
+  const [tipos, setTipos] = useState([]);
+  const [opciones, setOpciones] = useState({ productores: [], cosechas: [] });
+
+  const [form, setForm] = useState(ventaInicial);
   const [ventaEditando, setVentaEditando] = useState(null);
+  const [mostrarVenta, setMostrarVenta] = useState(false);
+  const [cargandoOpciones, setCargandoOpciones] = useState(false);
+  const [ventaViendo, setVentaViendo] = useState(null);
   const [ventaAnulando, setVentaAnulando] = useState(null);
-  const [motivoAnulacion, setMotivoAnulacion] = useState("");
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [motivo, setMotivo] = useState("");
+
+  const [formTarifa, setFormTarifa] = useState(tarifaInicial);
+  const [mostrarTarifa, setMostrarTarifa] = useState(false);
+  const [verHistorial, setVerHistorial] = useState(false);
+
+  const [busqueda, setBusqueda] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [filtroProductor, setFiltroProductor] = useState("todos");
+  const [filtroProducto, setFiltroProducto] = useState("todos");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [pagina, setPagina] = useState(1);
+
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const [errorForm, setErrorForm] = useState("");
   const [mensaje, setMensaje] = useState("");
 
+  const token = localStorage.getItem("token");
+  const authHeaders = token ? { Authorization: `Token ${token}` } : {};
+
+  async function pedirLista(url, mensajeError) {
+    const respuesta = await fetch(url, { headers: authHeaders });
+    if (!respuesta.ok) throw new Error(mensajeError);
+    return listaDe(await respuesta.json());
+  }
+
+  async function cargarVentas() {
+    try {
+      setVentas(await pedirLista(API_VENTAS, "No fue posible cargar las ventas."));
+    } catch (err) {
+      setError(`${err.message} Verifica que Django esté funcionando y que la URL de la API sea correcta.`);
+    }
+  }
+
+  async function cargarPrecios() {
+    try {
+      setPrecios(await pedirLista(API_PRECIOS, "No fue posible cargar las tarifas."));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function cargarTipos() {
+    try {
+      setTipos(await pedirLista(API_TIPOS, "No fue posible cargar los tipos de cultivo."));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   useEffect(() => {
-    let vigente = true;
+    Promise.all([cargarVentas(), cargarPrecios(), cargarTipos()]).finally(() => setCargando(false));
+  }, []);
 
-    obtenerOpcionesVenta()
-      .then((datos) => {
-        if (vigente) {
-          setOpciones(datos);
-        }
-      })
-      .catch((err) => {
-        if (vigente) {
-          setError(
-            getApiErrorMessage(
-              err,
-              "No fue posible cargar productores y cosechas disponibles.",
-            ),
-          );
-        }
-      });
-
-    if (esAdministrador) {
-      Promise.all([listarTiposCultivo({ activo: true }), listarPreciosProducto()])
-        .then(([tipos, precios]) => {
-          if (vigente) {
-            setTiposCultivo(tipos);
-            setPreciosProducto(precios);
-          }
-        })
-        .catch((err) => {
-          if (vigente) {
-            setError(
-              getApiErrorMessage(
-                err,
-                "No fue posible cargar el catálogo de precios.",
-              ),
-            );
-          }
-        });
-    }
-
-    Promise.all([listarVentas(), obtenerReporteIngresos()])
-      .then(([lista, resumen]) => {
-        if (vigente) {
-          setVentas(Array.isArray(lista) ? lista : lista.results || []);
-          setReporte(resumen);
-        }
-      })
-      .catch((err) => {
-        if (vigente) {
-          setError(
-            getApiErrorMessage(err, "No fue posible cargar las ventas."),
-          );
-        }
-      })
-      .finally(() => {
-        if (vigente) {
-          setCargando(false);
-        }
-      });
-
-    return () => {
-      vigente = false;
-    };
-  }, [esAdministrador]);
-
-  async function actualizarListado(filtrosAplicados = filtros) {
-    setCargando(true);
-    setError("");
-
-    const parametros = Object.fromEntries(
-      Object.entries(filtrosAplicados).filter(([, valor]) => Boolean(valor)),
-    );
+  // Cosechas disponibles y precios vigentes a la fecha de la venta
+  async function cargarOpciones(fecha, ventaId) {
+    setCargandoOpciones(true);
+    const parametros = new URLSearchParams({ fecha_venta: fecha });
+    if (ventaId) parametros.set("venta", ventaId);
 
     try {
-      const [lista, resumen] = await Promise.all([
-        listarVentas(parametros),
-        obtenerReporteIngresos(parametros),
-      ]);
-      setVentas(Array.isArray(lista) ? lista : lista.results || []);
-      setReporte(resumen);
+      const respuesta = await fetch(`${API_VENTAS}opciones/?${parametros}`, { headers: authHeaders });
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => ({}));
+        throw new Error(textoError(datos, "No fue posible cargar las cosechas disponibles."));
+      }
+      setOpciones(await respuesta.json());
     } catch (err) {
-      setError(getApiErrorMessage(err, "No fue posible actualizar las ventas."));
+      setErrorForm(err.message);
     } finally {
-      setCargando(false);
+      setCargandoOpciones(false);
     }
   }
 
-  async function actualizarOpciones(ventaId, fechaVenta) {
-    try {
-      const datos = await obtenerOpcionesVenta(ventaId, fechaVenta);
-      setOpciones(datos);
-      return datos;
-    } catch (err) {
-      setError(
-        getApiErrorMessage(
-          err,
-          "No fue posible cargar las cosechas disponibles.",
-        ),
-      );
-      return null;
-    }
+  // ---------- Venta: formulario ----------
+  function cambiarCampo(evento) {
+    const { name, value } = evento.target;
+    setForm((actual) => ({ ...actual, [name]: value }));
   }
 
-  function abrirNuevaVenta() {
-    setError("");
-    setMensaje("");
+  function cambiarProductor(evento) {
+    // las cosechas dependen del productor: se reinician los productos
+    setForm((actual) => ({ ...actual, productor: evento.target.value, lineas: [{ cosecha: "", cantidad: "" }] }));
+  }
+
+  function cambiarFecha(evento) {
+    const fecha = evento.target.value;
+    setForm((actual) => ({ ...actual, fecha_venta: fecha }));
+    if (fecha) cargarOpciones(fecha, ventaEditando?.id);
+  }
+
+  function cambiarLinea(indice, campo, valor) {
+    setForm((actual) => ({
+      ...actual,
+      lineas: actual.lineas.map((l, i) => (i === indice ? { ...l, [campo]: valor } : l)),
+    }));
+  }
+
+  function agregarLinea() {
+    setForm((actual) => ({ ...actual, lineas: [...actual.lineas, { cosecha: "", cantidad: "" }] }));
+  }
+
+  function quitarLinea(indice) {
+    setForm((actual) => ({
+      ...actual,
+      lineas: actual.lineas.length === 1 ? actual.lineas : actual.lineas.filter((_, i) => i !== indice),
+    }));
+  }
+
+  function nuevaVenta() {
+    const inicial = ventaInicial();
     setVentaEditando(null);
-    setFormulario(formularioVacio());
-    setMostrarFormulario(true);
+    setForm(inicial);
+    setErrorForm("");
+    setMensaje("");
+    setMostrarVenta(true);
+    cargarOpciones(inicial.fecha_venta, null);
   }
 
-  async function abrirEdicion(venta) {
-    setError("");
-    setMensaje("");
-    const datosOpciones = await actualizarOpciones(
-      venta.id,
-      venta.fecha_venta,
-    );
-    if (!datosOpciones) {
-      return;
-    }
-
-    setVentaEditando(venta.id);
-    setFormulario({
+  function editarVenta(venta) {
+    setVentaEditando(venta);
+    setForm({
       productor: String(venta.productor),
       fecha_venta: venta.fecha_venta,
       comprador_nombre: venta.comprador_nombre || "",
       comprador_documento: venta.comprador_documento || "",
       comprador_contacto: venta.comprador_contacto || "",
-      detalles: venta.detalles.map((detalle) => ({
-        cosecha: String(detalle.cosecha),
-        cantidad: detalle.cantidad,
-        precio_unitario: detalle.precio_unitario,
-        preservar_precio: true,
-      })),
+      lineas: venta.detalles.map((d) => ({ cosecha: String(d.cosecha), cantidad: d.cantidad })),
     });
-    setMostrarFormulario(true);
+    setErrorForm("");
+    setMensaje("");
+    setMostrarVenta(true);
+    cargarOpciones(venta.fecha_venta, venta.id);
   }
 
-  function cerrarFormulario() {
-    setMostrarFormulario(false);
+  function cerrarVenta() {
+    setMostrarVenta(false);
     setVentaEditando(null);
-    setFormulario(formularioVacio());
+    setForm(ventaInicial());
+    setErrorForm("");
   }
 
-  function actualizarProductor(productor) {
-    setFormulario((actual) => ({
-      ...actual,
-      productor,
-      detalles: actual.detalles.map(detalleVacio),
-    }));
+  // Al editar, las líneas que ya existían conservan su precio original.
+  const preciosOriginales = {};
+  ventaEditando?.detalles.forEach((d) => {
+    preciosOriginales[d.cosecha] = d.precio_unitario;
+  });
+
+  const cosechasDelProductor = opciones.cosechas.filter((c) => String(c.productor) === String(form.productor));
+
+  function estadoLinea(linea) {
+    const opcion = cosechasDelProductor.find((c) => String(c.id) === String(linea.cosecha));
+    const precio = opcion ? (preciosOriginales[opcion.id] ?? opcion.precio_unitario) : null;
+    const cantidad = Number(linea.cantidad || 0);
+    const disponible = opcion ? Number(opcion.cantidad_disponible) : 0;
+    const sinTarifa = Boolean(opcion) && precio === null;
+    const excede = Boolean(opcion) && cantidad > disponible;
+    const subtotal = opcion && precio !== null ? cantidad * Number(precio) : 0;
+    const completa = Boolean(opcion) && cantidad > 0 && !sinTarifa && !excede;
+    return { opcion, precio, cantidad, disponible, sinTarifa, excede, subtotal, completa };
   }
 
-  function actualizarDetalle(indice, campo, valor) {
-    setFormulario((actual) => ({
-      ...actual,
-      detalles: actual.detalles.map((detalle, posicion) =>
-        posicion === indice
-          ? campo === "cosecha"
-            ? {
-                ...detalle,
-                cosecha: valor,
-                precio_unitario:
-                  opciones.cosechas.find(
-                    (cosecha) => String(cosecha.id) === valor,
-                  )?.precio_unitario || "",
-                preservar_precio: false,
-              }
-            : { ...detalle, [campo]: valor }
-          : detalle,
-      ),
-    }));
-  }
+  const estadosLineas = form.lineas.map(estadoLinea);
+  const totalVenta = estadosLineas.reduce((suma, e) => suma + e.subtotal, 0);
+  const ventaValida = Boolean(form.productor) && estadosLineas.length > 0 && estadosLineas.every((e) => e.completa);
 
-  async function cambiarFechaVenta(fechaVenta) {
-    setFormulario((actual) => ({
-      ...actual,
-      fecha_venta: fechaVenta,
-      detalles: actual.detalles.map((detalle) =>
-        detalle.preservar_precio
-          ? detalle
-          : { ...detalle, precio_unitario: "" },
-      ),
-    }));
-
-    if (!fechaVenta) {
-      return;
-    }
-
-    const datosOpciones = await actualizarOpciones(ventaEditando, fechaVenta);
-    if (!datosOpciones) {
-      return;
-    }
-
-    setFormulario((actual) => ({
-      ...actual,
-      detalles: actual.detalles.map((detalle) => {
-        if (detalle.preservar_precio || !detalle.cosecha) {
-          return detalle;
-        }
-        const cosecha = datosOpciones.cosechas.find(
-          (opcion) => String(opcion.id) === detalle.cosecha,
-        );
-        return {
-          ...detalle,
-          precio_unitario: cosecha?.precio_unitario || "",
-        };
-      }),
-    }));
-  }
-
-  function calcularTotalPreliminar() {
-    const centavos = formulario.detalles.reduce((total, detalle) => {
-      const cantidad = Number(detalle.cantidad) || 0;
-      const precio = Number(detalle.precio_unitario) || 0;
-      return total + Math.round(cantidad * precio * 100);
-    }, 0);
-
-    return centavos / 100;
-  }
-
-  async function guardarFormulario(evento) {
+  async function guardarVenta(evento) {
     evento.preventDefault();
-    setError("");
-    setMensaje("");
     setGuardando(true);
+    setErrorForm("");
+    setMensaje("");
 
-    const datos = {
-      productor: Number(formulario.productor),
-      fecha_venta: formulario.fecha_venta,
-      comprador_nombre: formulario.comprador_nombre.trim(),
-      comprador_documento: formulario.comprador_documento.trim(),
-      comprador_contacto: formulario.comprador_contacto.trim(),
-      detalles: formulario.detalles.map((detalle) => ({
-        cosecha: Number(detalle.cosecha),
-        cantidad: detalle.cantidad,
-      })),
-    };
+    const editando = ventaEditando !== null;
 
     try {
-      await guardarVenta(datos, ventaEditando);
-      setMensaje(
-        ventaEditando
-          ? "Venta actualizada correctamente."
-          : "Venta registrada correctamente.",
-      );
-      cerrarFormulario();
-      await Promise.all([
-        actualizarListado(),
-        actualizarOpciones(),
-      ]);
-    } catch (err) {
-      setError(
-        getApiErrorMessage(err, "No fue posible guardar la venta."),
-      );
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  async function guardarPrecio(evento) {
-    evento.preventDefault();
-    setError("");
-    setMensaje("");
-    setGuardando(true);
-
-    try {
-      await crearPrecioProducto(formularioPrecio);
-      setMensaje("La tarifa se registró correctamente.");
-      setFormularioPrecio({
-        tipo_cultivo: "",
-        unidad_medida: "KG",
-        precio_unitario: "",
-        vigente_desde: fechaLocal(),
+      const respuesta = await fetch(editando ? `${API_VENTAS}${ventaEditando.id}/` : API_VENTAS, {
+        method: editando ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({
+          productor: Number(form.productor),
+          fecha_venta: form.fecha_venta,
+          comprador_nombre: form.comprador_nombre.trim(),
+          comprador_documento: form.comprador_documento.trim(),
+          comprador_contacto: form.comprador_contacto.trim(),
+          detalles: form.lineas.map((l) => ({ cosecha: Number(l.cosecha), cantidad: l.cantidad })),
+        }),
       });
-      setPreciosProducto(await listarPreciosProducto());
-      await actualizarOpciones(null, formularioPrecio.vigente_desde);
+
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw new Error(textoError(datos, "No fue posible guardar la venta."));
+
+      cerrarVenta();
+      setMensaje(editando ? "Venta actualizada correctamente." : "Venta registrada correctamente.");
+      await cargarVentas();
     } catch (err) {
-      setError(
-        getApiErrorMessage(err, "No fue posible registrar la tarifa."),
-      );
+      setErrorForm(err.message);
     } finally {
       setGuardando(false);
     }
   }
 
-  async function confirmarAnulacion(evento) {
+  // ---------- Anular ----------
+  function abrirAnulacion(venta) {
+    setVentaAnulando(venta);
+    setMotivo("");
+    setErrorForm("");
+    setMensaje("");
+  }
+
+  async function anularVenta(evento) {
     evento.preventDefault();
-    if (!ventaAnulando) {
-      return;
-    }
-
     setGuardando(true);
-    setError("");
+    setErrorForm("");
+
     try {
-      await anularVenta(ventaAnulando.id, motivoAnulacion.trim());
+      const respuesta = await fetch(`${API_VENTAS}${ventaAnulando.id}/anular/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ motivo: motivo.trim() }),
+      });
+
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw new Error(textoError(datos, "No fue posible anular la venta."));
+
       setVentaAnulando(null);
-      setMotivoAnulacion("");
-      setMensaje("La venta se anuló correctamente.");
-      await Promise.all([
-        actualizarListado(),
-        actualizarOpciones(),
-      ]);
+      setMensaje("Venta anulada correctamente. Las cantidades vuelven a estar disponibles.");
+      await cargarVentas();
     } catch (err) {
-      setError(getApiErrorMessage(err, "No fue posible anular la venta."));
+      setErrorForm(err.message);
     } finally {
       setGuardando(false);
     }
   }
 
-  const cosechasProductor = opciones.cosechas.filter(
-    (cosecha) => String(cosecha.productor) === formulario.productor,
+  // ---------- Tarifas ----------
+  function cambiarTarifa(evento) {
+    const { name, value } = evento.target;
+    setFormTarifa((actual) => ({ ...actual, [name]: value }));
+  }
+
+  function nuevaTarifa() {
+    setFormTarifa(tarifaInicial());
+    setErrorForm("");
+    setMensaje("");
+    setMostrarTarifa(true);
+  }
+
+  function cerrarTarifa() {
+    setMostrarTarifa(false);
+    setErrorForm("");
+  }
+
+  async function guardarTarifa(evento) {
+    evento.preventDefault();
+    setGuardando(true);
+    setErrorForm("");
+
+    try {
+      const respuesta = await fetch(API_PRECIOS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ ...formTarifa, tipo_cultivo: Number(formTarifa.tipo_cultivo) }),
+      });
+
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw new Error(textoError(datos, "No fue posible guardar la tarifa."));
+
+      cerrarTarifa();
+      setMensaje("Tarifa registrada correctamente.");
+      await cargarPrecios();
+    } catch (err) {
+      setErrorForm(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  // Tarifa vigente de hoy por cultivo y unidad
+  const hoy = hoyISO();
+  const vigentes = {};
+  precios
+    .filter((p) => p.vigente_desde <= hoy)
+    .forEach((p) => {
+      const clave = `${p.tipo_cultivo}-${p.unidad_medida}`;
+      const actual = vigentes[clave];
+      if (!actual || p.vigente_desde > actual.vigente_desde || (p.vigente_desde === actual.vigente_desde && p.id > actual.id)) {
+        vigentes[clave] = p;
+      }
+    });
+  const listaTarifas = (verHistorial ? precios : Object.values(vigentes)).slice().sort(
+    (a, b) =>
+      a.nombre_tipo_cultivo.localeCompare(b.nombre_tipo_cultivo, "es") ||
+      a.unidad_medida.localeCompare(b.unidad_medida) ||
+      b.vigente_desde.localeCompare(a.vigente_desde)
   );
 
+  // ---------- Indicadores (datos reales) ----------
+  const registradas = ventas.filter((v) => v.estado === "REGISTRADA");
+  const anuladas = ventas.length - registradas.length;
+  const ingresosTotales = registradas.reduce((suma, v) => suma + Number(v.total || 0), 0);
+  const promedio = registradas.length ? ingresosTotales / registradas.length : 0;
+
+  const mesActual = new Date().getFullYear() * 12 + new Date().getMonth();
+  const ventasEsteMes = registradas.filter((v) => mesDe(v.fecha_venta) === mesActual).length;
+  const ingresosDelMes = (mes) =>
+    registradas.filter((v) => mesDe(v.fecha_venta) === mes).reduce((suma, v) => suma + Number(v.total || 0), 0);
+  const ingresosMesAnterior = ingresosDelMes(mesActual - 1);
+  const variacionIngresos =
+    ingresosMesAnterior > 0
+      ? Math.round(((ingresosDelMes(mesActual) - ingresosMesAnterior) * 100) / ingresosMesAnterior)
+      : null;
+
+  // ---------- Filtros y paginación ----------
+  const productoresOpciones = [...new Set(ventas.map((v) => v.nombre_productor))].sort((a, b) => a.localeCompare(b, "es"));
+  const productosOpciones = [...new Set(ventas.flatMap((v) => v.detalles.map((d) => d.nombre_producto)))].sort((a, b) =>
+    a.localeCompare(b, "es")
+  );
+
+  const filtradas = ventas.filter((v) => {
+    const texto = [
+      `#${v.id}`,
+      v.nombre_productor,
+      v.comprador_nombre,
+      v.comprador_documento,
+      ...v.detalles.map((d) => d.nombre_producto),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return (
+      texto.includes(busqueda.toLowerCase()) &&
+      (!desde || v.fecha_venta >= desde) &&
+      (!hasta || v.fecha_venta <= hasta) &&
+      (filtroProductor === "todos" || v.nombre_productor === filtroProductor) &&
+      (filtroProducto === "todos" || v.detalles.some((d) => d.nombre_producto === filtroProducto)) &&
+      (filtroEstado === "todos" || v.estado === filtroEstado)
+    );
+  });
+
+  const hayFiltros =
+    busqueda || desde || hasta || filtroProductor !== "todos" || filtroProducto !== "todos" || filtroEstado !== "todos";
+
+  function limpiarFiltros() {
+    setBusqueda("");
+    setDesde("");
+    setHasta("");
+    setFiltroProductor("todos");
+    setFiltroProducto("todos");
+    setFiltroEstado("todos");
+    setPagina(1);
+  }
+
+  function conFiltro(setter) {
+    return (valor) => {
+      setter(valor);
+      setPagina(1);
+    };
+  }
+
+  const total = filtradas.length;
+  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const inicio = (paginaActual - 1) * POR_PAGINA;
+  const visibles = filtradas.slice(inicio, inicio + POR_PAGINA);
+
+  // Ingresos por producto y por productor (sobre las ventas registradas del filtro actual)
+  const porProducto = {};
+  const porProductor = {};
+  filtradas
+    .filter((v) => v.estado === "REGISTRADA")
+    .forEach((v) => {
+      porProductor[v.nombre_productor] = (porProductor[v.nombre_productor] || 0) + Number(v.total || 0);
+      v.detalles.forEach((d) => {
+        porProducto[d.nombre_producto] = (porProducto[d.nombre_producto] || 0) + Number(d.subtotal || 0);
+      });
+    });
+  const topProductos = Object.entries(porProducto).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const topProductores = Object.entries(porProductor).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  const tiposActivos = tipos.filter((t) => t.activo);
+
   return (
-    <main className="ventas-page">
-      <header className="ventas-header">
-        <div>
-          <span className="ventas-eyebrow">
-            GESTIÓN AGRÍCOLA INTELIGENTE
-          </span>
-          <h1>Ventas</h1>
-          <p>Registra ventas de cosechas y consulta los ingresos.</p>
+    <div className="vt-page">
+      <header className="vt-header">
+        <div className="vt-titulo">
+          <ShoppingCart size={38} strokeWidth={1.6} />
+          <div>
+            <h1>Ventas</h1>
+            <p>Registra las ventas de cosechas y consulta los ingresos.</p>
+          </div>
         </div>
-        <button
-          className="ventas-btn-principal"
-          onClick={abrirNuevaVenta}
-          disabled={opciones.productores.length === 0}
-        >
-          ＋ Nueva venta
+
+        <button className="vt-btn-primary" onClick={nuevaVenta}>
+          <Plus size={18} /> Nueva venta
         </button>
       </header>
 
-      {mensaje && (
-        <div className="ventas-alerta exito" role="status">
-          {mensaje}
-          <button onClick={() => setMensaje("")} aria-label="Cerrar mensaje">
-            ×
-          </button>
-        </div>
-      )}
-      {error && (
-        <div className="ventas-alerta error" role="alert">
-          {error}
-          <button onClick={() => setError("")} aria-label="Cerrar error">
-            ×
-          </button>
-        </div>
-      )}
+      <section className="vt-kpis">
+        <article className="vt-card vt-kpi">
+          <div className="vt-kpi-icon"><Receipt size={24} /></div>
+          <div>
+            <span>Ventas registradas</span>
+            <strong>{registradas.length}</strong>
+            {ventasEsteMes > 0 && <small className="vt-up">↑ +{ventasEsteMes} este mes</small>}
+          </div>
+        </article>
 
-      <section className="ventas-resumen">
-        <article className="ventas-resumen-card">
-          <span className="ventas-resumen-icon verde">＄</span>
+        <article className="vt-card vt-kpi">
+          <div className="vt-kpi-icon"><Banknote size={24} /></div>
           <div>
-            <small>Ingresos registrados</small>
-            <strong>{formatoMoneda(reporte.total_ingresos)}</strong>
+            <span>Ingresos totales</span>
+            <strong className="vt-kpi-monto">{formatearCOP(ingresosTotales)}</strong>
+            {variacionIngresos !== null ? (
+              <small className={variacionIngresos >= 0 ? "vt-up" : "vt-down"}>
+                {variacionIngresos >= 0 ? "↑" : "↓"} {Math.abs(variacionIngresos)}% vs. mes anterior
+              </small>
+            ) : (
+              <small>sin contar ventas anuladas</small>
+            )}
           </div>
         </article>
-        <article className="ventas-resumen-card">
-          <span className="ventas-resumen-icon azul">▤</span>
+
+        <article className="vt-card vt-kpi">
+          <div className="vt-kpi-icon"><TrendingUp size={24} /></div>
           <div>
-            <small>Ventas vigentes</small>
-            <strong>{reporte.cantidad_ventas}</strong>
+            <span>Promedio por venta</span>
+            <strong className="vt-kpi-monto">{formatearCOP(promedio)}</strong>
+            <small>por venta registrada</small>
           </div>
         </article>
-        <article className="ventas-resumen-card">
-          <span className="ventas-resumen-icon naranja">🌱</span>
+
+        <article className="vt-card vt-kpi">
+          <div className="vt-kpi-icon"><Ban size={24} /></div>
           <div>
-            <small>Productores con ingresos</small>
-            <strong>{reporte.por_productor.length}</strong>
+            <span>Ventas anuladas</span>
+            <strong>{anuladas}</strong>
+            <small>no suman a los ingresos</small>
           </div>
         </article>
       </section>
 
-      {esAdministrador && (
-        <section className="ventas-panel ventas-tarifas-panel">
-          <div className="ventas-panel-heading">
-            <div>
-              <h2>Tarifario de productos</h2>
-              <p>
-                Define precios por cultivo, unidad y fecha de vigencia. Las
-                tarifas aplicadas a ventas anteriores no se modifican.
-              </p>
-            </div>
-          </div>
-          <form className="ventas-tarifa-form" onSubmit={guardarPrecio}>
-            <label>
-              Cultivo
-              <select
-                value={formularioPrecio.tipo_cultivo}
-                onChange={(evento) =>
-                  setFormularioPrecio({
-                    ...formularioPrecio,
-                    tipo_cultivo: evento.target.value,
-                  })
-                }
-                required
-              >
-                <option value="">Selecciona un cultivo</option>
-                {tiposCultivo.map((tipo) => (
-                  <option key={tipo.id} value={tipo.id}>
-                    {tipo.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Unidad
-              <select
-                value={formularioPrecio.unidad_medida}
-                onChange={(evento) =>
-                  setFormularioPrecio({
-                    ...formularioPrecio,
-                    unidad_medida: evento.target.value,
-                  })
-                }
-              >
-                {unidadesMedida.map((unidad) => (
-                  <option key={unidad.valor} value={unidad.valor}>
-                    {unidad.etiqueta}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Precio por unidad (COP)
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={formularioPrecio.precio_unitario}
-                onChange={(evento) =>
-                  setFormularioPrecio({
-                    ...formularioPrecio,
-                    precio_unitario: evento.target.value,
-                  })
-                }
-                required
-              />
-            </label>
-            <label>
-              Vigente desde
-              <input
-                type="date"
-                value={formularioPrecio.vigente_desde}
-                onChange={(evento) =>
-                  setFormularioPrecio({
-                    ...formularioPrecio,
-                    vigente_desde: evento.target.value,
-                  })
-                }
-                required
-              />
-            </label>
-            <button
-              type="submit"
-              className="ventas-btn-principal"
-              disabled={guardando || tiposCultivo.length === 0}
-            >
-              {guardando ? "Guardando..." : "Agregar tarifa"}
-            </button>
-          </form>
+      {mensaje && (
+        <div className="vt-alerta exito" role="status">
+          {mensaje}
+          <button onClick={() => setMensaje("")} aria-label="Cerrar mensaje"><X size={16} /></button>
+        </div>
+      )}
+      {error && (
+        <div className="vt-alerta error" role="alert">
+          {error}
+          <button onClick={() => setError("")} aria-label="Cerrar error"><X size={16} /></button>
+        </div>
+      )}
 
-          {preciosProducto.length === 0 ? (
-            <div className="ventas-vacio compacto">
-              Aún no hay tarifas registradas.
+      <div className="vt-grid">
+        <section className="vt-card vt-panel">
+          <div className="vt-filtros">
+            <label className="vt-busqueda">
+              <Search size={18} />
+              <input
+                type="search"
+                placeholder="Buscar por n.º, productor, comprador o producto..."
+                value={busqueda}
+                onChange={(e) => conFiltro(setBusqueda)(e.target.value)}
+              />
+            </label>
+
+            <div className="vt-rango">
+              <CalendarDays size={18} />
+              <label>
+                <span>Desde</span>
+                <input type="date" value={desde} max={hasta || undefined} onChange={(e) => conFiltro(setDesde)(e.target.value)} />
+              </label>
+              <label>
+                <span>Hasta</span>
+                <input type="date" value={hasta} min={desde || undefined} onChange={(e) => conFiltro(setHasta)(e.target.value)} />
+              </label>
+            </div>
+
+            <select value={filtroProductor} onChange={(e) => conFiltro(setFiltroProductor)(e.target.value)} aria-label="Filtrar por productor">
+              <option value="todos">Todos los productores</option>
+              {productoresOpciones.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            <select value={filtroProducto} onChange={(e) => conFiltro(setFiltroProducto)(e.target.value)} aria-label="Filtrar por producto">
+              <option value="todos">Todos los productos</option>
+              {productosOpciones.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            <select value={filtroEstado} onChange={(e) => conFiltro(setFiltroEstado)(e.target.value)} aria-label="Filtrar por estado">
+              <option value="todos">Todos los estados</option>
+              <option value="REGISTRADA">Registradas</option>
+              <option value="ANULADA">Anuladas</option>
+            </select>
+
+            {hayFiltros && (
+              <button type="button" className="vt-btn-secundario" onClick={limpiarFiltros}>
+                Limpiar
+              </button>
+            )}
+          </div>
+
+          {cargando ? (
+            <div className="vt-vacio">Cargando ventas...</div>
+          ) : total === 0 ? (
+            <div className="vt-vacio">
+              <ShoppingCart size={38} strokeWidth={1.4} />
+              <h3>No hay ventas para mostrar</h3>
+              <p>Registra una venta o cambia los filtros de búsqueda.</p>
+              <button className="vt-btn-primary" onClick={nuevaVenta}>Registrar venta</button>
             </div>
           ) : (
-            <div className="ventas-tabla-contenedor">
-              <table className="ventas-tabla">
+            <div className="vt-tabla-contenedor">
+              <table className="vt-tabla">
                 <thead>
                   <tr>
-                    <th>Producto</th>
-                    <th>Unidad</th>
-                    <th>Precio</th>
-                    <th>Vigente desde</th>
-                    <th>Registrado por</th>
+                    <th>N.º</th>
+                    <th>Fecha</th>
+                    <th>Productor</th>
+                    <th>Comprador</th>
+                    <th>Productos</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preciosProducto.map((precio) => (
-                    <tr key={precio.id}>
-                      <td>{precio.nombre_tipo_cultivo}</td>
-                      <td>{precio.unidad_medida_display}</td>
-                      <td className="ventas-monto">
-                        {formatoMoneda(precio.precio_unitario)}
-                      </td>
-                      <td>{precio.vigente_desde}</td>
-                      <td>{precio.nombre_registrado_por}</td>
-                    </tr>
-                  ))}
+                  {visibles.map((venta) => {
+                    const productos = venta.detalles
+                      .map((d) => `${d.nombre_producto} (${formatearCantidad(d.cantidad)} ${d.unidad_medida})`)
+                      .join(", ");
+                    const anulada = venta.estado === "ANULADA";
+
+                    return (
+                      <tr key={venta.id} className={anulada ? "vt-fila--anulada" : ""}>
+                        <td><strong className="vt-nombre">#{venta.id}</strong></td>
+                        <td>{formatearFecha(venta.fecha_venta)}</td>
+                        <td>{venta.nombre_productor}</td>
+                        <td>{venta.comprador_nombre || "—"}</td>
+                        <td className="vt-productos" title={productos}>{productos}</td>
+                        <td className="vt-total">{formatearCOP(venta.total)}</td>
+                        <td>
+                          <span className={`vt-estado ${anulada ? "anulada" : "registrada"}`}>
+                            {anulada ? "Anulada" : "Registrada"}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="vt-acciones">
+                            <button className="vt-accion ver" onClick={() => setVentaViendo(venta)} title="Ver detalle" aria-label="Ver detalle">
+                              <Eye size={17} />
+                            </button>
+                            {!anulada && (
+                              <>
+                                <button className="vt-accion editar" onClick={() => editarVenta(venta)} title="Editar venta" aria-label="Editar venta">
+                                  <Pencil size={17} />
+                                </button>
+                                <button className="vt-accion desactivar" onClick={() => abrirAnulacion(venta)} title="Anular venta" aria-label="Anular venta">
+                                  <Ban size={17} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
-      )}
 
-      <section className="ventas-panel ventas-filtros-panel">
-        <div className="ventas-panel-heading">
-          <div>
-            <h2>Filtrar por fecha</h2>
-            <p>El reporte de ingresos excluye las ventas anuladas.</p>
-          </div>
-          <div className="ventas-filtros">
-            <label>
-              Desde
-              <input
-                type="date"
-                value={filtros.desde}
-                onChange={(evento) =>
-                  setFiltros({ ...filtros, desde: evento.target.value })
-                }
-              />
-            </label>
-            <label>
-              Hasta
-              <input
-                type="date"
-                value={filtros.hasta}
-                onChange={(evento) =>
-                  setFiltros({ ...filtros, hasta: evento.target.value })
-                }
-              />
-            </label>
-            <button
-              className="ventas-btn-secundario"
-              onClick={() => actualizarListado()}
-              disabled={cargando}
-            >
-              Aplicar
-            </button>
-            <button
-              className="ventas-btn-limpiar"
-              onClick={() => {
-                const vacios = { desde: "", hasta: "" };
-                setFiltros(vacios);
-                actualizarListado(vacios);
-              }}
-              disabled={cargando}
-            >
-              Limpiar
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="ventas-panel">
-        <div className="ventas-panel-heading">
-          <div>
-            <h2>Historial de ventas</h2>
-            <p>Consulta, edita o anula los registros.</p>
-          </div>
-          <span className="ventas-contador">{ventas.length} registros</span>
-        </div>
-
-        {cargando ? (
-          <div className="ventas-vacio">Cargando ventas...</div>
-        ) : ventas.length === 0 ? (
-          <div className="ventas-vacio">
-            <span>＄</span>
-            <h3>No hay ventas para mostrar</h3>
-            <p>Registra una venta o ajusta el rango de fechas.</p>
-          </div>
-        ) : (
-          <div className="ventas-tabla-contenedor">
-            <table className="ventas-tabla">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Productor</th>
-                  <th>Productos</th>
-                  <th>Comprador</th>
-                  <th>Total</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ventas.map((venta) => (
-                  <tr key={venta.id}>
-                    <td>{venta.fecha_venta}</td>
-                    <td>{venta.nombre_productor}</td>
-                    <td>
-                      {venta.detalles.map((detalle) => (
-                        <div className="ventas-producto-resumen" key={detalle.id}>
-                          <strong>{detalle.nombre_producto}</strong>
-                          <small>
-                            {detalle.cantidad} {detalle.unidad_medida}
-                          </small>
-                        </div>
-                      ))}
-                    </td>
-                    <td>{venta.comprador_nombre || "No registrado"}</td>
-                    <td className="ventas-monto">
-                      {formatoMoneda(venta.total)}
-                    </td>
-                    <td>
-                      <span
-                        className={`ventas-estado ${
-                          venta.estado === "REGISTRADA"
-                            ? "vigente"
-                            : "anulada"
-                        }`}
-                      >
-                        {venta.estado === "REGISTRADA"
-                          ? "Vigente"
-                          : "Anulada"}
-                      </span>
-                    </td>
-                    <td>
-                      {venta.estado === "REGISTRADA" ? (
-                        <div className="ventas-acciones">
-                          <button
-                            className="ventas-btn-editar"
-                            onClick={() => abrirEdicion(venta)}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            className="ventas-btn-anular"
-                            onClick={() => {
-                              setVentaAnulando(venta);
-                              setMotivoAnulacion("");
-                            }}
-                          >
-                            Anular
-                          </button>
-                        </div>
-                      ) : (
-                        <small className="ventas-motivo">
-                          {venta.motivo_anulacion || "Sin motivo"}
-                        </small>
-                      )}
-                    </td>
-                  </tr>
+          {!cargando && total > 0 && (
+            <footer className="vt-paginacion">
+              <span>
+                Mostrando {inicio + 1} - {inicio + visibles.length} de {total} ventas
+              </span>
+              <div className="vt-paginas">
+                <button onClick={() => setPagina(paginaActual - 1)} disabled={paginaActual === 1} aria-label="Página anterior">
+                  <ChevronLeft size={16} />
+                </button>
+                {numerosDePagina(paginaActual, totalPaginas).map((n) => (
+                  <button key={n} className={n === paginaActual ? "activa" : ""} onClick={() => setPagina(n)}>
+                    {n}
+                  </button>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="ventas-reportes-grid">
-        <article className="ventas-panel">
-          <div className="ventas-panel-heading">
-            <div>
-              <h2>Ingresos por producto</h2>
-              <p>Solo ventas vigentes dentro del rango seleccionado.</p>
-            </div>
-          </div>
-          {reporte.por_producto.length === 0 ? (
-            <div className="ventas-vacio compacto">Sin ingresos en el período.</div>
-          ) : (
-            <div className="ventas-lista-reporte">
-              {reporte.por_producto.map((item) => (
-                <div
-                  className="ventas-fila-reporte"
-                  key={`${item.tipo_cultivo_id}-${item.unidad_medida}`}
-                >
-                  <div>
-                    <strong>{item.producto}</strong>
-                    <small>
-                      {item.cantidad} {item.unidad_medida}
-                    </small>
-                  </div>
-                  <strong>{formatoMoneda(item.ingresos)}</strong>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
-
-        <article className="ventas-panel">
-          <div className="ventas-panel-heading">
-            <div>
-              <h2>Ingresos por productor</h2>
-              <p>Productores con ventas vigentes en el período.</p>
-            </div>
-          </div>
-          {reporte.por_productor.length === 0 ? (
-            <div className="ventas-vacio compacto">Sin ingresos en el período.</div>
-          ) : (
-            <div className="ventas-lista-reporte">
-              {reporte.por_productor.map((item) => (
-                <div className="ventas-fila-reporte" key={item.productor_id}>
-                  <strong>{item.productor}</strong>
-                  <strong>{formatoMoneda(item.ingresos)}</strong>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
-      </section>
-
-      {mostrarFormulario && (
-        <div className="ventas-modal-fondo">
-          <section
-            className="ventas-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ventas-modal-titulo"
-          >
-            <header className="ventas-modal-header">
-              <div>
-                <span className="ventas-eyebrow">REGISTRO COMERCIAL</span>
-                <h2 id="ventas-modal-titulo">
-                  {ventaEditando ? "Editar venta" : "Registrar venta"}
-                </h2>
+                <button onClick={() => setPagina(paginaActual + 1)} disabled={paginaActual === totalPaginas} aria-label="Página siguiente">
+                  <ChevronRight size={16} />
+                </button>
               </div>
-              <button
-                className="ventas-cerrar-modal"
-                onClick={cerrarFormulario}
-                aria-label="Cerrar formulario"
-              >
-                ×
+            </footer>
+          )}
+        </section>
+
+        <aside className="vt-side">
+          <section className="vt-card">
+            <div className="vt-side-cabecera">
+              <h3 className="vt-side-titulo"><Tag size={18} /> {verHistorial ? "Historial de tarifas" : "Tarifas vigentes"}</h3>
+              {esAdministrador && (
+                <button className="vt-accion editar" onClick={nuevaTarifa} title="Nueva tarifa" aria-label="Nueva tarifa">
+                  <Plus size={17} />
+                </button>
+              )}
+            </div>
+
+            {listaTarifas.length === 0 ? (
+              <p className="vt-side-vacio">
+                Aún no hay tarifas. {esAdministrador ? "Registra la primera para poder vender." : "Pide a un administrador que registre una."}
+              </p>
+            ) : (
+              <ul className="vt-tarifas">
+                {listaTarifas.map((t) => (
+                  <li key={t.id}>
+                    <div>
+                      <strong>{t.nombre_tipo_cultivo}</strong>
+                      <small>
+                        por {t.unidad_medida_display.toLowerCase()} · desde {formatearFecha(t.vigente_desde)}
+                      </small>
+                    </div>
+                    <span className="vt-tarifa-precio">{formatearCOP(t.precio_unitario)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {precios.length > 0 && (
+              <button type="button" className="vt-enlace vt-enlace--bloque" onClick={() => setVerHistorial((v) => !v)}>
+                {verHistorial ? "Ver solo las vigentes" : "Ver historial completo"}
+              </button>
+            )}
+          </section>
+
+          <section className="vt-card">
+            <h3 className="vt-side-titulo"><Sprout size={18} /> Ingresos por producto</h3>
+            {topProductos.length === 0 ? (
+              <p className="vt-side-vacio">Aún no hay ventas registradas.</p>
+            ) : (
+              <BarrasIngresos datos={topProductos} />
+            )}
+          </section>
+
+          <section className="vt-card">
+            <h3 className="vt-side-titulo"><Users size={18} /> Ingresos por productor</h3>
+            {topProductores.length === 0 ? (
+              <p className="vt-side-vacio">Aún no hay ventas registradas.</p>
+            ) : (
+              <BarrasIngresos datos={topProductores} />
+            )}
+          </section>
+        </aside>
+      </div>
+
+      {/* Modal: detalle de la venta */}
+      {ventaViendo && (
+        <div className="vt-modal-fondo">
+          <section className="vt-modal vt-modal--ancho" role="dialog" aria-modal="true">
+            <header className="vt-modal-header">
+              <div>
+                <span className="vt-eyebrow">DETALLE DE LA VENTA</span>
+                <h2>Venta #{ventaViendo.id} · {formatearFecha(ventaViendo.fecha_venta)}</h2>
+              </div>
+              <button type="button" className="vt-modal-cerrar" onClick={() => setVentaViendo(null)} aria-label="Cerrar detalle">
+                <X size={18} />
               </button>
             </header>
 
-            <form onSubmit={guardarFormulario}>
-              <div className="ventas-form-grid">
+            <dl className="vt-detalle">
+              <div><dt>Productor</dt><dd>{ventaViendo.nombre_productor}</dd></div>
+              <div>
+                <dt>Estado</dt>
+                <dd>{ventaViendo.estado === "ANULADA" ? "Anulada" : "Registrada"}</dd>
+              </div>
+              <div><dt>Comprador</dt><dd>{ventaViendo.comprador_nombre || "No registrado"}</dd></div>
+              <div><dt>Documento</dt><dd>{ventaViendo.comprador_documento || "No registrado"}</dd></div>
+              <div><dt>Contacto</dt><dd>{ventaViendo.comprador_contacto || "No registrado"}</dd></div>
+              <div><dt>Fecha de registro</dt><dd>{formatearFechaHora(ventaViendo.fecha_creacion)}</dd></div>
+              {ventaViendo.estado === "ANULADA" && (
+                <div className="vt-campo-completo">
+                  <dt>Anulación ({formatearFechaHora(ventaViendo.fecha_anulacion)})</dt>
+                  <dd>{ventaViendo.motivo_anulacion || "Sin motivo registrado"}</dd>
+                </div>
+              )}
+            </dl>
+
+            <div className="vt-mini-contenedor">
+              <table className="vt-mini">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Lote</th>
+                    <th>Cantidad</th>
+                    <th>Precio unitario</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ventaViendo.detalles.map((d) => (
+                    <tr key={d.id}>
+                      <td>{d.nombre_producto}</td>
+                      <td>{d.nombre_lote}</td>
+                      <td>{formatearCantidad(d.cantidad)} {d.unidad_medida}</td>
+                      <td>{formatearCOP(d.precio_unitario)}</td>
+                      <td>{formatearCOP(d.subtotal)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={4}>Total</td>
+                    <td>{formatearCOP(ventaViendo.total)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Modal: registrar / editar venta */}
+      {mostrarVenta && (
+        <div className="vt-modal-fondo">
+          <section className="vt-modal vt-modal--ancho" role="dialog" aria-modal="true" aria-labelledby="vt-venta-titulo">
+            <header className="vt-modal-header">
+              <div>
+                <span className="vt-eyebrow">INFORMACIÓN DE LA VENTA</span>
+                <h2 id="vt-venta-titulo">
+                  {ventaEditando !== null ? `Editar venta #${ventaEditando.id}` : "Nueva venta"}
+                </h2>
+                <p>El precio se toma de la tarifa vigente en la fecha de la venta.</p>
+              </div>
+              <button type="button" className="vt-modal-cerrar" onClick={cerrarVenta} aria-label="Cerrar formulario">
+                <X size={18} />
+              </button>
+            </header>
+
+            {errorForm && <div className="vt-alerta error" role="alert">{errorForm}</div>}
+
+            <form onSubmit={guardarVenta}>
+              <div className="vt-form-grid">
                 <label>
-                  Productor de origen
-                  <select
-                    value={formulario.productor}
-                    onChange={(evento) => actualizarProductor(evento.target.value)}
-                    required
-                  >
+                  Productor *
+                  <select name="productor" value={form.productor} onChange={cambiarProductor} required>
                     <option value="">Selecciona un productor</option>
-                    {opciones.productores.map((productor) => (
-                      <option key={productor.id} value={productor.id}>
-                        {productor.nombre} · {productor.numero_documento}
-                      </option>
+                    {opciones.productores.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nombre} — {p.numero_documento}</option>
                     ))}
                   </select>
                 </label>
+
                 <label>
-                  Fecha de venta
-                  <input
-                    type="date"
-                    value={formulario.fecha_venta}
-                    onChange={(evento) => cambiarFechaVenta(evento.target.value)}
+                  Fecha de venta *
+                  <input name="fecha_venta" type="date" max={hoyISO()} value={form.fecha_venta} onChange={cambiarFecha} required />
+                </label>
+
+                <label>
+                  Comprador
+                  <input name="comprador_nombre" value={form.comprador_nombre} onChange={cambiarCampo} maxLength={150} placeholder="Nombre o empresa" />
+                </label>
+
+                <label>
+                  Documento del comprador
+                  <input name="comprador_documento" value={form.comprador_documento} onChange={cambiarCampo} maxLength={30} />
+                </label>
+
+                <label className="vt-campo-completo">
+                  Contacto del comprador
+                  <input name="comprador_contacto" value={form.comprador_contacto} onChange={cambiarCampo} maxLength={100} placeholder="Teléfono o correo" />
+                </label>
+              </div>
+
+              <div className="vt-lineas">
+                <div className="vt-lineas-titulo">
+                  <h3>Productos vendidos</h3>
+                  {cargandoOpciones && <small>Actualizando cosechas y precios...</small>}
+                </div>
+
+                {!form.productor ? (
+                  <p className="vt-ayuda">Selecciona un productor para ver sus cosechas disponibles.</p>
+                ) : cosechasDelProductor.length === 0 && !cargandoOpciones ? (
+                  <p className="vt-ayuda">
+                    Este productor no tiene cosechas disponibles para vender.{" "}
+                    <Link to="/cosechas">Registra una cosecha</Link> primero.
+                  </p>
+                ) : (
+                  <>
+                    <div className="vt-linea vt-linea--cabecera">
+                      <span>Cosecha</span>
+                      <span>Cantidad</span>
+                      <span>Precio unit.</span>
+                      <span>Subtotal</span>
+                      <span />
+                    </div>
+
+                    {form.lineas.map((linea, i) => {
+                      const e = estadosLineas[i];
+                      const usadas = form.lineas.filter((_, j) => j !== i).map((l) => String(l.cosecha));
+                      const elegibles = cosechasDelProductor.filter((c) => !usadas.includes(String(c.id)));
+
+                      return (
+                        <div key={i} className="vt-linea-bloque">
+                          <div className="vt-linea">
+                            <select
+                              value={linea.cosecha}
+                              onChange={(ev) => cambiarLinea(i, "cosecha", ev.target.value)}
+                              aria-label="Cosecha"
+                              required
+                            >
+                              <option value="">Selecciona una cosecha</option>
+                              {elegibles.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.nombre_producto} · {c.nombre_lote} · {formatearFecha(c.fecha_cosecha)} · disp.{" "}
+                                  {formatearCantidad(c.cantidad_disponible)} {c.unidad_medida_display}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={linea.cantidad}
+                              onChange={(ev) => cambiarLinea(i, "cantidad", ev.target.value)}
+                              aria-label="Cantidad"
+                              placeholder="0"
+                              required
+                            />
+
+                            <div className="vt-celda">{e.opcion && e.precio !== null ? formatearCOP(e.precio) : "—"}</div>
+                            <div className="vt-celda vt-celda--fuerte">{e.opcion && e.precio !== null ? formatearCOP(e.subtotal) : "—"}</div>
+
+                            <button
+                              type="button"
+                              className="vt-accion desactivar"
+                              onClick={() => quitarLinea(i)}
+                              disabled={form.lineas.length === 1}
+                              title="Quitar producto"
+                              aria-label="Quitar producto"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+
+                          {e.opcion && (
+                            <small className={`vt-linea-nota ${e.excede || e.sinTarifa ? "vt-linea-nota--error" : ""}`}>
+                              {e.sinTarifa
+                                ? `No hay una tarifa vigente de ${e.opcion.nombre_producto} por ${e.opcion.unidad_medida_display.toLowerCase()} en esta fecha. Registra una tarifa primero.`
+                                : e.excede
+                                  ? `Solo hay ${formatearCantidad(e.disponible)} ${e.opcion.unidad_medida_display.toLowerCase()} disponibles.`
+                                  : `Disponible: ${formatearCantidad(e.disponible)} ${e.opcion.unidad_medida_display.toLowerCase()}`}
+                            </small>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      className="vt-enlace"
+                      onClick={agregarLinea}
+                      disabled={form.lineas.length >= cosechasDelProductor.length}
+                    >
+                      + Agregar otro producto
+                    </button>
+                  </>
+                )}
+
+                <div className="vt-total-venta">
+                  <span>Total de la venta</span>
+                  <strong>{formatearCOP(totalVenta)}</strong>
+                </div>
+              </div>
+
+              <footer className="vt-modal-footer">
+                <button type="button" className="vt-btn-secundario" onClick={cerrarVenta} disabled={guardando}>
+                  Cancelar
+                </button>
+                <button type="submit" className="vt-btn-primary" disabled={guardando || !ventaValida}>
+                  {guardando ? "Guardando..." : ventaEditando !== null ? "Guardar cambios" : "Registrar venta"}
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {/* Modal: anular venta */}
+      {ventaAnulando && (
+        <div className="vt-modal-fondo">
+          <section className="vt-modal vt-modal--chico" role="dialog" aria-modal="true" aria-labelledby="vt-anular-titulo">
+            <header className="vt-modal-header">
+              <div>
+                <span className="vt-eyebrow">ANULAR VENTA</span>
+                <h2 id="vt-anular-titulo">Venta #{ventaAnulando.id}</h2>
+                <p>
+                  {ventaAnulando.nombre_productor} · {formatearCOP(ventaAnulando.total)}
+                </p>
+              </div>
+              <button type="button" className="vt-modal-cerrar" onClick={() => setVentaAnulando(null)} aria-label="Cerrar">
+                <X size={18} />
+              </button>
+            </header>
+
+            <p className="vt-ayuda">
+              La venta queda en el historial como anulada y deja de sumar a los ingresos. Las cantidades vuelven a estar
+              disponibles para vender. Esta acción no se puede deshacer.
+            </p>
+
+            {errorForm && <div className="vt-alerta error" role="alert">{errorForm}</div>}
+
+            <form onSubmit={anularVenta}>
+              <div className="vt-form-grid vt-form-grid--una">
+                <label>
+                  Motivo de la anulación *
+                  <textarea
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    rows={3}
+                    placeholder="Ej. El comprador canceló el pedido"
                     required
                   />
                 </label>
               </div>
 
-              <fieldset className="ventas-comprador">
-                <legend>Datos del comprador (opcionales)</legend>
-                <div className="ventas-form-grid">
-                  <label>
-                    Nombre
-                    <input
-                      value={formulario.comprador_nombre}
-                      onChange={(evento) =>
-                        setFormulario({
-                          ...formulario,
-                          comprador_nombre: evento.target.value,
-                        })
-                      }
-                      maxLength={150}
-                    />
-                  </label>
-                  <label>
-                    Documento
-                    <input
-                      value={formulario.comprador_documento}
-                      onChange={(evento) =>
-                        setFormulario({
-                          ...formulario,
-                          comprador_documento: evento.target.value,
-                        })
-                      }
-                      maxLength={30}
-                    />
-                  </label>
-                  <label className="ventas-campo-completo">
-                    Teléfono o correo
-                    <input
-                      value={formulario.comprador_contacto}
-                      onChange={(evento) =>
-                        setFormulario({
-                          ...formulario,
-                          comprador_contacto: evento.target.value,
-                        })
-                      }
-                      maxLength={100}
-                    />
-                  </label>
-                </div>
-              </fieldset>
-
-              <div className="ventas-detalles-heading">
-                <div>
-                  <h3>Productos vendidos</h3>
-                  <p>El precio se registra por la unidad de cada cosecha.</p>
-                </div>
-                <button
-                  type="button"
-                  className="ventas-btn-secundario"
-                  onClick={() =>
-                    setFormulario({
-                      ...formulario,
-                      detalles: [...formulario.detalles, detalleVacio()],
-                    })
-                  }
-                  disabled={!formulario.productor}
-                >
-                  ＋ Añadir producto
-                </button>
-              </div>
-
-              {formulario.detalles.map((detalle, indice) => (
-                <div className="ventas-detalle-form" key={indice}>
-                  <label className="ventas-producto-campo">
-                    Cosecha / producto
-                    <select
-                      value={detalle.cosecha}
-                      onChange={(evento) =>
-                        actualizarDetalle(indice, "cosecha", evento.target.value)
-                      }
-                      required
-                    >
-                      <option value="">
-                        {formulario.productor
-                          ? "Selecciona un producto disponible"
-                          : "Selecciona primero un productor"}
-                      </option>
-                      {cosechasProductor.map((cosecha) => (
-                        <option key={cosecha.id} value={cosecha.id}>
-                          {cosecha.nombre_producto} · {cosecha.nombre_lote} ·
-                          {" "}disponible: {cosecha.cantidad_disponible}{" "}
-                          {cosecha.unidad_medida_display}
-                          {cosecha.precio_unitario
-                            ? ` · ${formatoMoneda(cosecha.precio_unitario)}`
-                            : " · Sin tarifa vigente"}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Cantidad
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={detalle.cantidad}
-                      onChange={(evento) =>
-                        actualizarDetalle(indice, "cantidad", evento.target.value)
-                      }
-                      required
-                    />
-                  </label>
-                  <label>
-                    Precio unitario (COP /{" "}
-                    {cosechasProductor.find(
-                      (cosecha) => String(cosecha.id) === detalle.cosecha,
-                    )?.unidad_medida_display || "unidad"}
-                    )
-                    <input
-                      type="number"
-                      value={detalle.precio_unitario}
-                      readOnly
-                      required
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="ventas-quitar-detalle"
-                    onClick={() =>
-                      setFormulario({
-                        ...formulario,
-                        detalles: formulario.detalles.filter(
-                          (_, posicion) => posicion !== indice,
-                        ),
-                      })
-                    }
-                    disabled={formulario.detalles.length === 1}
-                    aria-label="Quitar producto"
-                    title="Quitar producto"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-
-              <div className="ventas-total-preliminar">
-                <span>Total calculado</span>
-                <strong>{formatoMoneda(calcularTotalPreliminar())}</strong>
-              </div>
-
-              <footer className="ventas-modal-footer">
-                <button
-                  type="button"
-                  className="ventas-btn-limpiar"
-                  onClick={cerrarFormulario}
-                  disabled={guardando}
-                >
+              <footer className="vt-modal-footer">
+                <button type="button" className="vt-btn-secundario" onClick={() => setVentaAnulando(null)} disabled={guardando}>
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="ventas-btn-principal"
-                  disabled={guardando}
-                >
-                  {guardando
-                    ? "Guardando..."
-                    : ventaEditando
-                      ? "Guardar cambios"
-                      : "Registrar venta"}
+                <button type="submit" className="vt-btn-peligro" disabled={guardando || !motivo.trim()}>
+                  {guardando ? "Anulando..." : "Anular venta"}
                 </button>
               </footer>
             </form>
@@ -999,64 +1116,68 @@ function Ventas() {
         </div>
       )}
 
-      {ventaAnulando && (
-        <div className="ventas-modal-fondo">
-          <section
-            className="ventas-modal ventas-modal-anulacion"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ventas-anular-titulo"
-          >
-            <header className="ventas-modal-header">
+      {/* Modal: nueva tarifa */}
+      {mostrarTarifa && (
+        <div className="vt-modal-fondo">
+          <section className="vt-modal vt-modal--chico" role="dialog" aria-modal="true" aria-labelledby="vt-tarifa-titulo">
+            <header className="vt-modal-header">
               <div>
-                <span className="ventas-eyebrow">CONFIRMAR ACCIÓN</span>
-                <h2 id="ventas-anular-titulo">Anular venta</h2>
+                <span className="vt-eyebrow">TARIFAS</span>
+                <h2 id="vt-tarifa-titulo">Nueva tarifa</h2>
+                <p>Las tarifas no se editan: para cambiar un precio, registra una nueva con su fecha de vigencia.</p>
               </div>
-              <button
-                className="ventas-cerrar-modal"
-                onClick={() => setVentaAnulando(null)}
-                aria-label="Cerrar"
-              >
-                ×
+              <button type="button" className="vt-modal-cerrar" onClick={cerrarTarifa} aria-label="Cerrar formulario">
+                <X size={18} />
               </button>
             </header>
-            <p>
-              La venta #{ventaAnulando.id} se conservará en el historial, pero
-              sus ingresos y cantidades dejarán de contabilizarse.
-            </p>
-            <form onSubmit={confirmarAnulacion}>
-              <label>
-                Motivo (opcional)
-                <textarea
-                  value={motivoAnulacion}
-                  onChange={(evento) =>
-                    setMotivoAnulacion(evento.target.value)
-                  }
-                  rows={3}
-                />
-              </label>
-              <footer className="ventas-modal-footer">
-                <button
-                  type="button"
-                  className="ventas-btn-limpiar"
-                  onClick={() => setVentaAnulando(null)}
-                  disabled={guardando}
-                >
-                  Volver
+
+            {errorForm && <div className="vt-alerta error" role="alert">{errorForm}</div>}
+
+            <form onSubmit={guardarTarifa}>
+              <div className="vt-form-grid">
+                <label className="vt-campo-completo">
+                  Tipo de cultivo *
+                  <select name="tipo_cultivo" value={formTarifa.tipo_cultivo} onChange={cambiarTarifa} required>
+                    <option value="">Selecciona un cultivo</option>
+                    {tiposActivos.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nombre}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Unidad de medida *
+                  <select name="unidad_medida" value={formTarifa.unidad_medida} onChange={cambiarTarifa} required>
+                    {UNIDADES.map(([valor, nombre]) => (
+                      <option key={valor} value={valor}>{nombre}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Precio unitario (COP) *
+                  <input name="precio_unitario" type="number" min="0.01" step="0.01" value={formTarifa.precio_unitario} onChange={cambiarTarifa} required />
+                </label>
+
+                <label className="vt-campo-completo">
+                  Vigente desde *
+                  <input name="vigente_desde" type="date" value={formTarifa.vigente_desde} onChange={cambiarTarifa} required />
+                </label>
+              </div>
+
+              <footer className="vt-modal-footer">
+                <button type="button" className="vt-btn-secundario" onClick={cerrarTarifa} disabled={guardando}>
+                  Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="ventas-btn-confirmar-anulacion"
-                  disabled={guardando}
-                >
-                  {guardando ? "Anulando..." : "Confirmar anulación"}
+                <button type="submit" className="vt-btn-primary" disabled={guardando}>
+                  {guardando ? "Guardando..." : "Registrar tarifa"}
                 </button>
               </footer>
             </form>
           </section>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 
