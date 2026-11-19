@@ -43,12 +43,12 @@
   color: #9be37a;
 }
 
-.sb-brand h2 { margin: 0; font-size: 17px; line-height: 1.15; }
+.sb-brand h2 { margin: 0; font-size: 1.0625rem; line-height: 1.15; }
 
 .sb-brand span {
   display: block;
   margin-top: 3px;
-  font-size: 10.5px;
+  font-size: 0.65625rem;
   line-height: 1.25;
   color: #c9e4d0;
 }
@@ -66,7 +66,7 @@
   background: transparent;
   color: #e6f2e9;
   font: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -78,7 +78,7 @@
 
 .sb-link--active,
 .sb-link--active:hover {
-  background: #1f9d55;
+  background: var(--c-accent-solido, #1f9d55);
   color: #fff;
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
@@ -97,4 +97,4 @@
 
 @media (max-width: 700px) {
   .sb { width: 200px; min-width: 200px; }
-} 
+}

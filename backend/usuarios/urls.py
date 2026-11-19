@@ -1,5 +1,3 @@
-
-
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
@@ -9,6 +7,8 @@ from .views import (
     solicitar_acceso,
     solicitar_recuperacion,
     restablecer_contrasena,
+    perfil,
+    cambiar_contrasena,
 )
 
 router = DefaultRouter()
@@ -27,7 +27,12 @@ urlpatterns = [
         restablecer_contrasena,
         name="restablecer_contrasena",
     ),
+    path("perfil/", perfil, name="perfil"),
+    path(
+        "cambiar-contrasena/",
+        cambiar_contrasena,
+        name="cambiar_contrasena",
+    ),
 ]
 
 urlpatterns += router.urls
-

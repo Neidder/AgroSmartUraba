@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from rest_framework import viewsets
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from .models import Usuario
-from .serializers import UsuarioSerializer
+from .serializers import UsuarioSerializer, PerfilSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -49,6 +50,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def destroy(self, request, *args, **kwargs):
+        self.get_object()
+        raise MethodNotAllowed(
+            "DELETE",
+            "Los usuarios se deben archivar para conservar su historial.",
+        )
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -72,8 +80,7 @@ def iniciar_sesion(request):
             "rol": usuario.rol,
         },
     }, status=status.HTTP_200_OK)
-    
-    
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -112,7 +119,6 @@ def solicitar_acceso(request):
         },
         status=status.HTTP_201_CREATED,
     )
-
 
 
 @api_view(["POST"])
@@ -169,7 +175,6 @@ def solicitar_recuperacion(request):
     )
 
 
-
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def restablecer_contrasena(request):
@@ -212,5 +217,63 @@ def restablecer_contrasena(request):
 
     return Response(
         {"mensaje": "Contraseña actualizada. Ya puedes iniciar sesión."},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def perfil(request):
+    """Datos del usuario que inició sesión. Solo permite editar nombre y correo."""
+    if request.method == "PATCH":
+        serializer = PerfilSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    return Response(PerfilSerializer(request.user).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def cambiar_contrasena(request):
+    """Cambia la contraseña del usuario actual y renueva su token de sesión."""
+    actual = str(request.data.get("contrasena_actual", ""))
+    nueva = str(request.data.get("nueva_contrasena", ""))
+
+    if not request.user.check_password(actual):
+        return Response(
+            {"error": "La contraseña actual no es correcta."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if len(nueva) < 8:
+        return Response(
+            {"error": "La nueva contraseña debe tener al menos 8 caracteres."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if nueva == actual:
+        return Response(
+            {"error": "La nueva contraseña debe ser diferente de la actual."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    request.user.set_password(nueva)
+    request.user.save()
+
+    # Se invalidan las sesiones anteriores y se entrega un token nuevo.
+    Token.objects.filter(user=request.user).delete()
+    token = Token.objects.create(user=request.user)
+
+    return Response(
+        {
+            "mensaje": "Contraseña actualizada correctamente.",
+            "token": token.key,
+        },
         status=status.HTTP_200_OK,
     )

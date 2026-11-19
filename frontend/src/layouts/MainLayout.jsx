@@ -1,16 +1,20 @@
-
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import "../styles/Dashboard.css";
+import Topbar from "../components/Topbar";
+import "../styles/Tema.css";
+import "../utils/preferencias"; // aplica las preferencias guardadas al abrir la aplicación
 import "../styles/MainLayout.css";
 
 function MainLayout() {
   return (
-    <div className="agro-dashboard">
+    <div className="ml-shell">
       <Sidebar />
-      <main className="agro-main">
-        <Outlet />
-      </main>
+      <div className="ml-body">
+        <Topbar notificaciones={0} />
+        <main className="ml-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

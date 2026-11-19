@@ -11,6 +11,7 @@ import Cosechas from "../pages/Cosechas";
 import Ventas from "../pages/Ventas";
 import Economia from "../pages/Economia";
 import Usuarios from "../pages/Usuarios";
+import Configuracion from "../pages/Configuracion";
 
 import SolicitarAcceso from "../pages/SolicitarAcceso";
 import RecuperarContrasena from "../pages/RecuperarContrasena";
@@ -25,14 +26,17 @@ function AppRoutes() {
       <Routes>
         {/* Rutas públicas */}
         <Route path="/" element={<Login />} />
+
         <Route
           path="/solicitar-acceso"
           element={<SolicitarAcceso />}
         />
+
         <Route
           path="/recuperar-contrasena"
           element={<RecuperarContrasena />}
         />
+
         <Route
           path="/restablecer-contrasena"
           element={<RestablecerContrasena />}
@@ -49,10 +53,11 @@ function AppRoutes() {
             <Route path="/cosechas" element={<Cosechas />} />
             <Route path="/ventas" element={<Ventas />} />
             <Route path="/economia" element={<Economia />} />
+            <Route path="/configuracion" element={<Configuracion />} />
           </Route>
         </Route>
 
-        {/* Usuarios: solo administradores, con la misma barra lateral */}
+        {/* Usuarios: solo administradores */}
         <Route
           element={
             <RutaProtegida rolesPermitidos={["ADMINISTRADOR"]} />

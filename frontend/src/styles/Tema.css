@@ -1,0 +1,248 @@
+/* ==========================================================================
+   Tema y preferencias de AgroSmart Urabá
+   Las variables --c-* las usan todos los módulos. El tema claro conserva
+   exactamente los colores originales; el oscuro y los acentos los reemplazan.
+   ========================================================================== */
+
+:root {
+  --c-bg: #f4f7f4;
+  --c-surface: #ffffff;
+  --c-surface-2: #f3f7f4;
+  --c-hover: #fafcfa;
+  --c-hover-2: #f0f7f1;
+  --c-neutral: #eef1ef;
+  --c-track: #e6eee8;
+
+  --c-border: #e5ece6;
+  --c-border-2: #dbe5dd;
+  --c-divider: #edf1ee;
+  --c-border-accent: #b9dcc4;
+
+  --c-text: #1c2b21;
+  --c-text-2: #33463a;
+  --c-muted: #7a8c80;
+  --c-heading: #0b4228;
+
+  --c-primary: #0f7a45;
+  --c-primary-hover: #0b6338;
+  --c-primary-text: #0f7a45;
+  --c-accent: #1f9d55;
+  --c-accent-solido: #1f9d55;
+  --c-ring: rgba(31, 157, 85, 0.12);
+
+  --c-ok-bg: #d8f2df;
+  --c-ok-text: #1c7a43;
+  --c-info-bg: #e6f1fc;
+  --c-info-text: #2b5f8f;
+  --c-danger-bg: #fdeaea;
+  --c-danger-text: #963b32;
+  --c-warn-bg: #f3eae2;
+  --c-warn-text: #8a6a55;
+  --c-note-bg: #fff4d6;
+  --c-note-text: #8a6400;
+
+  --c-shadow: rgba(16, 60, 36, 0.05);
+}
+
+/* ---------- Tema oscuro ---------- */
+
+:root[data-tema="oscuro"] {
+  --c-bg: #0e1511;
+  --c-surface: #17211b;
+  --c-surface-2: #1d2a22;
+  --c-hover: #1b281f;
+  --c-hover-2: #243629;
+  --c-neutral: #2a3a30;
+  --c-track: #2c3d33;
+
+  --c-border: #2a3a30;
+  --c-border-2: #36493d;
+  --c-divider: #243228;
+  --c-border-accent: #2f5a40;
+
+  --c-text: #e7efe9;
+  --c-text-2: #c8d6cc;
+  --c-muted: #9bb0a2;
+  --c-heading: #8fdcaa;
+
+  --c-primary: #178a50;
+  --c-primary-hover: #1ea35f;
+  --c-primary-text: #5fd08e;
+  --c-accent: #28b067;
+  --c-ring: rgba(40, 176, 103, 0.28);
+
+  --c-ok-bg: #1d3a29;
+  --c-ok-text: #6fdc9a;
+  --c-info-bg: #1b3347;
+  --c-info-text: #8cc4f0;
+  --c-danger-bg: #3a1f1f;
+  --c-danger-text: #f0928a;
+  --c-warn-bg: #3a2f27;
+  --c-warn-text: #d8b79d;
+  --c-note-bg: #3d3416;
+  --c-note-text: #f0d27a;
+
+  --c-shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* Controles nativos (calendarios, listas, barras de desplazamiento) en oscuro,
+   solo dentro de la aplicación para no afectar las pantallas de inicio de sesión. */
+:root[data-tema="oscuro"] .ml-shell {
+  color-scheme: dark;
+}
+
+.ml-shell {
+  color: var(--c-text);
+}
+
+/* ---------- Color de acento ---------- */
+
+:root[data-acento="azul"] {
+  --c-accent-solido: #2b7fc7;
+  --c-primary: #1f6fb2;
+  --c-primary-hover: #185a92;
+  --c-primary-text: #1f6fb2;
+  --c-accent: #2b8bd9;
+  --c-heading: #0f3f6e;
+  --c-ring: rgba(43, 139, 217, 0.16);
+}
+
+:root[data-tema="oscuro"][data-acento="azul"] {
+  --c-primary: #2a7fc4;
+  --c-primary-hover: #3a8fd4;
+  --c-primary-text: #7ab8ee;
+  --c-accent: #4aa0e8;
+  --c-heading: #a9d3f5;
+  --c-ring: rgba(74, 160, 232, 0.28);
+}
+
+:root[data-acento="morado"] {
+  --c-accent-solido: #7c55d6;
+  --c-primary: #6b46c1;
+  --c-primary-hover: #5a38a8;
+  --c-primary-text: #6b46c1;
+  --c-accent: #8b5cf6;
+  --c-heading: #3f2a78;
+  --c-ring: rgba(139, 92, 246, 0.16);
+}
+
+:root[data-tema="oscuro"][data-acento="morado"] {
+  --c-primary: #7c55d6;
+  --c-primary-hover: #8d68e6;
+  --c-primary-text: #b9a1f5;
+  --c-accent: #9b78f7;
+  --c-heading: #cdbdf7;
+  --c-ring: rgba(155, 120, 247, 0.28);
+}
+
+:root[data-acento="naranja"] {
+  --c-accent-solido: #d9681a;
+  --c-primary: #c2570c;
+  --c-primary-hover: #a64a0a;
+  --c-primary-text: #b24f0a;
+  --c-accent: #e0701d;
+  --c-heading: #7a3c0a;
+  --c-ring: rgba(224, 112, 29, 0.18);
+}
+
+:root[data-tema="oscuro"][data-acento="naranja"] {
+  --c-primary: #d9681a;
+  --c-primary-hover: #ea7a2c;
+  --c-primary-text: #f5a46a;
+  --c-accent: #f08a3a;
+  --c-heading: #f5c9a5;
+  --c-ring: rgba(240, 138, 58, 0.28);
+}
+
+/* ---------- Tipo de letra ---------- */
+
+:root[data-fuente="clasica"] {
+  --fuente: Georgia, "Times New Roman", serif;
+}
+
+:root[data-fuente="legible"] {
+  --fuente: Verdana, Tahoma, Geneva, sans-serif;
+}
+
+:root[data-fuente="monoespaciada"] {
+  --fuente: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--fuente, inherit);
+}
+
+/* ---------- Accesibilidad ---------- */
+
+:root[data-contraste="alto"] {
+  --c-text: #000000;
+  --c-text-2: #101a14;
+  --c-muted: #2f3f35;
+  --c-border: #6b7f72;
+  --c-border-2: #4a5f51;
+  --c-divider: #9db0a3;
+}
+
+:root[data-tema="oscuro"][data-contraste="alto"] {
+  --c-text: #ffffff;
+  --c-text-2: #f1f6f3;
+  --c-muted: #d4e2d8;
+  --c-border: #6f8a78;
+  --c-border-2: #8aa597;
+  --c-divider: #50665a;
+}
+
+:root[data-animaciones="reducidas"] *,
+:root[data-animaciones="reducidas"] *::before,
+:root[data-animaciones="reducidas"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+:root[data-densidad="compacta"] table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+:root[data-densidad="compacta"] table th {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[role="switch"]:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Gráficas (Recharts) ---------- */
+
+.recharts-cartesian-grid line {
+  stroke: var(--c-divider);
+}
+
+.recharts-text,
+.recharts-cartesian-axis-tick-value {
+  fill: var(--c-muted);
+}
+
+.recharts-default-tooltip {
+  border-color: var(--c-border) !important;
+  background-color: var(--c-surface) !important;
+}
+
+.recharts-tooltip-label,
+.recharts-tooltip-item {
+  color: var(--c-text) !important;
+}
+
+.recharts-legend-item-text {
+  color: var(--c-text-2) !important;
+}
